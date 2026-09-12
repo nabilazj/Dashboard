@@ -21,8 +21,6 @@
 
       <section class="balance-overview-grid" id="balanceSection"></section>
 
-      <div class="bottom-summary two-col" id="saldoExtras"></div>
-
       <div class="stats-grid six" id="kpiRow1"></div>
       <div class="stats-grid two" id="kpiRow2"></div>
 
@@ -51,6 +49,11 @@
           '<div><span>' + App.esc(p.nama.toUpperCase()) + '</span><strong>' + App.fmtRupiah(p.total) + '</strong>' +
           '<small>' + p.jumlahRekening + ' rekening</small></div></article>';
       }).join('');
+      // Digabung di grid yang sama (ukuran & bentuk kartu identik) supaya
+      // mengisi ruang kosong di bawah 2 kartu perusahaan, bukan jadi baris
+      // terpisah di bagian lain halaman.
+      companyCards += kpiCard({ cls: 'cyan', txt: '&#8595;' }, 'PEMASUKAN BULAN INI', App.fmtRupiah(d.kpi.pemasukanBulanIni), 'Dari data mutasi seluruh rekening') +
+        kpiCard({ cls: 'purple', txt: 'Rp' }, 'TOTAL SISA PIUTANG YTD', App.fmtRupiah(d.kpi.totalSisaPiutangYtd), 'Per Januari–' + d.bulanBerjalan);
 
       var rows = s.rekening.map(function (r) {
         return '<tr><td class="account-name"><span>' + App.esc(r.rekening) + '</span></td>' +
@@ -161,9 +164,6 @@
     }
 
     function renderBottom(d) {
-      document.getElementById('saldoExtras').innerHTML =
-        '<div><span>PEMASUKAN BULAN INI</span><strong>' + App.fmtRupiah(d.kpi.pemasukanBulanIni) + '</strong><small>Dari data mutasi seluruh rekening</small></div>' +
-        '<div><span>TOTAL SISA PIUTANG YTD</span><strong>' + App.fmtRupiah(d.kpi.totalSisaPiutangYtd) + '</strong><small>Per Januari&ndash;' + d.bulanBerjalan + '</small></div>';
       document.getElementById('bottomSummary').innerHTML =
         '<div class="reminder-card"><strong>&#128276; Reminder Penagihan</strong><ul>' +
           '<li>Follow up <b>' + d.reminder.terlambat90 + '</b> client yang terlambat lebih dari 90 hari.</li>' +

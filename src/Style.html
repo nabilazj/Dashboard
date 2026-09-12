@@ -114,6 +114,7 @@
   .payroll-status.today{color:#4b22ff;background:#e7e3ff;}
   .month-pill{color:#048c68;background:#dcfaee;}
   .month-pill.dash{color:#a7add0;background:#f0f2f8;font-weight:400;}
+  .month-pill.unpaid{color:#cf3535;background:#ffe3e3;}
 
   /* ---------- Filters ---------- */
   .filter-panel{padding-bottom:14px;}
@@ -190,6 +191,25 @@
   @media (max-width:1100px){
     .tagihan-content-grid{grid-template-columns:1fr;}
     .top10-list{max-height:none;overflow-y:visible;}
+  }
+
+  /* ---------- Tabel matrix Tagihan: baris & kolom pertama dibekukan,
+     dengan scroll 2 arah (mengikuti area yang tingginya dibatasi) ---------- */
+  .matrix-scroll{max-height:640px;overflow:auto;}
+  .matrix-scroll table.matrix{min-width:900px;}
+  .matrix-scroll table.matrix th{position:sticky;top:0;z-index:2;background:#f8f9fd;}
+  .matrix-scroll table.matrix td:nth-child(1),.matrix-scroll table.matrix th:nth-child(1){
+    position:sticky;left:0;z-index:3;background:#fff;width:44px;min-width:44px;}
+  .matrix-scroll table.matrix td:nth-child(2),.matrix-scroll table.matrix th:nth-child(2){
+    position:sticky;left:44px;z-index:3;background:#fff;min-width:190px;
+    box-shadow:4px 0 6px -4px rgba(24,42,91,.18);}
+  .matrix-scroll table.matrix thead th:nth-child(1),.matrix-scroll table.matrix thead th:nth-child(2){z-index:4;background:#f8f9fd;}
+  .matrix-scroll table.matrix tbody tr:nth-child(2n) td:nth-child(1),
+  .matrix-scroll table.matrix tbody tr:nth-child(2n) td:nth-child(2){background:#fbfcfe;}
+  .matrix-scroll table.matrix tbody tr:hover td:nth-child(1),
+  .matrix-scroll table.matrix tbody tr:hover td:nth-child(2){background:#f5f3ff;}
+  @media (max-width:1100px){
+    .matrix-scroll{max-height:70vh;}
   }
 
   .bottom-summary{display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:16px;}

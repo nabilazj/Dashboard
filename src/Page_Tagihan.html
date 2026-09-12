@@ -49,7 +49,7 @@
 
         <section class="panel table-panel">
           <div class="panel-head"><h2 id="matrixTitle">DATA TAGIHAN</h2><span class="result-count" id="countLabel">0 lokasi</span></div>
-          <div class="table-scroll"><table class="data-table matrix"><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
+          <div class="table-scroll matrix-scroll"><table class="data-table matrix"><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
           <div id="emptyState"></div>
           <div class="pager" id="pager"></div>
         </section>
@@ -165,8 +165,11 @@
         var no = (d.table.page - 1) * 25 + i + 1;
         var cells = r.cells.map(function (c) {
           if (!c) return '<td><span class="month-pill dash">&mdash;</span></td>';
-          var cls = c.status === 'LUNAS' ? 'month-pill' : 'month-pill dash';
-          return '<td><span class="' + cls + '">' + App.esc(c.status) + '</span></td>';
+          if (c.status === 'LUNAS') return '<td><span class="month-pill">LUNAS</span></td>';
+          // Belum bayar: tampilkan nominal sisa piutangnya, bukan tulisan
+          // "BELUM BAYAR" — filter Status tetap bekerja seperti biasa,
+          // hanya cara menampilkannya yang berubah.
+          return '<td><span class="month-pill unpaid">' + App.fmtRupiah(c.sisa || c.nilai) + '</span></td>';
         }).join('');
         return '<tr><td>' + no + '</td><td class="location">' + App.esc(r.lokasi) + '</td><td>' + App.esc(r.bank) + '</td>' +
           '<td>' + App.esc(r.picAdmin) + '</td>' + cells + '<td class="total-cell">' + App.fmtRupiah(r.totalPeriode) + '</td></tr>';

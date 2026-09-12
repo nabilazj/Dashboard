@@ -350,7 +350,7 @@ function buildTagihanRows_(all, f) {
     rowsForLokasi.forEach(function (t) { byPeriode[t.PERIODE_LABEL] = t; });
     var cells = kolomBulan.map(function (bulan) {
       var t = byPeriode[bulan];
-      return t ? { status: t.STATUS, nilai: t.NILAI_TAGIHAN } : null;
+      return t ? { status: t.STATUS, nilai: t.NILAI_TAGIHAN, sisa: t.SISA_PIUTANG } : null;
     });
     var totalPeriode = sum_(cells.filter(function (c) { return c; }), function (c) { return c.nilai; });
     return { lokasi: lokasi, bank: first.BANK, picAdmin: first.PIC_ADMIN, cells: cells, totalPeriode: totalPeriode };
@@ -464,14 +464,17 @@ function getInvoiceData_(all, f) {
 
 function filterSchedule_(schedule, f, today, awalBulan, akhirBulan, in7Hari) {
   var rentang = f.rentang || 'MONTH';
-  var scopeStart = awalBulan, scopeEnd = akhirBulan;
+  var scopeStart = null, scopeEnd = null;
+  var scopeSheet = null;
   if (rentang === 'TODAY') { scopeStart = today; scopeEnd = today; }
   else if (rentang === '7D') { scopeStart = today; scopeEnd = in7Hari; }
-  else if (rentang === 'ALL') { scopeStart = null; scopeEnd = null; }
+  else if (rentang === 'MONTH') { scopeSheet = CONFIG.MONTHS[today.getMonth()]; } // lihat catatan di getPenggajianData_
+  // rentang === 'ALL' -> tanpa batas tanggal/sheet
 
   var search = (f.search || '').toLowerCase();
   var filtered = schedule.filter(function (s) {
     if (scopeStart && (s.TANGGAL < scopeStart || s.TANGGAL > scopeEnd)) return false;
+    if (scopeSheet && s.SHEET !== scopeSheet) return false;
     if (f.status && f.status !== 'ALL' && s.STATUS !== f.status) return false;
     if (f.bank && f.bank !== 'ALL' && s.BANK !== f.bank) return false;
     if (f.picRekap && f.picRekap !== 'ALL' && s.PIC_REKAP !== f.picRekap) return false;
@@ -513,7 +516,16 @@ function getPenggajianData_(all, rekap, payroll, f) {
   var akhirBulan = new Date(today.getFullYear(), today.getMonth() + 1, 0);
   var in7Hari = new Date(today.getTime() + 7 * 86400000);
 
-  var bulanIni = schedule.filter(function (s) { return s.TANGGAL >= awalBulan && s.TANGGAL <= akhirBulan; });
+  // PENTING: "bulan ini" diambil berdasarkan SHEET TAB aktif (mis. tab
+  // "SEPTEMBER"), BUKAN tanggal kalender baris itu — karena tanggal
+  // pencairan di suatu tab bulan bisa jatuh di akhir bulan sebelumnya
+  // (mis. dijadwalkan "20 Agu 2026" tapi tetap dicatat di tab SEPTEMBER
+  // sebagai bagian siklus gajian September). Kalau difilter per tanggal
+  // kalender murni, baris seperti ini akan hilang dari KPI "bulan ini"
+  // padahal jelas-jelas ada di sheet aktif — ini akar masalah "Jadwal
+  // Penggajian belum masuk" yang dilaporkan.
+  var currentSheetName = CONFIG.MONTHS[currentMonthIdx];
+  var bulanIni = schedule.filter(function (s) { return s.SHEET === currentSheetName; });
   var totalRencana = sum_(bulanIni, function (s) { return s.NOMINAL; });
   var sudahDibayar = sum_(bulanIni.filter(function (s) { return s.STATUS === 'SUDAH DIBAYAR'; }), function (s) { return s.NOMINAL; });
   var jadwalHariIni = schedule.filter(function (s) { return s.TANGGAL.getTime() === today.getTime(); });
