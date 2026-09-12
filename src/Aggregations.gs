@@ -100,6 +100,7 @@ function getDashboardData_(all) {
   var sudahTerbayar = sum_(tahunIni, function (t) { return t.NOMINAL_TERBAYAR; });
   var countLunas = tahunIni.filter(function (t) { return t.STATUS === 'LUNAS'; }).length;
   var countBelumBayar = tahunIni.length - countLunas;
+  var belumBayarNominal = sum_(tahunIni.filter(function (t) { return t.STATUS !== 'LUNAS'; }), function (t) { return t.NILAI_TAGIHAN; });
 
   var mutasiHariIni = sum_(MU.filter(function (m) { return m.TANGGAL && m.TANGGAL.getTime() === today.getTime(); }), function (m) { return m.NOMINAL; });
   var belumTeralokasi = MU.filter(function (m) { return !m.TERALOKASI; }).length;
@@ -151,6 +152,7 @@ function getDashboardData_(all) {
       sisaPiutang: sisaPiutang,
       sudahTerbayar: sudahTerbayar, sudahTerbayarCount: countLunas,
       belumBayarCount: countBelumBayar,
+      belumBayarNominal: belumBayarNominal,
       mutasiHariIni: mutasiHariIni,
       belumTeralokasi: belumTeralokasi,
       totalPiutangClient: sisaPiutang,
@@ -305,24 +307,44 @@ function buildTagihanRows_(all, f) {
   var year = toNumber_(f.tahun) || today.getFullYear();
   var kolomBulan = buildKolomBulan_(f, currentMonthIdx);
   var search = (f.search || '').toLowerCase();
+  // Filter "Bulan" (baru): saat diisi, filter Status dicek KHUSUS pada baris
+  // bulan itu (bukan baris manapun) — supaya bisa mencari mis. "lokasi mana
+  // yang BELUM BAYAR di bulan Agustus" — tapi matrix tetap menampilkan SEMUA
+  // kolom bulan seperti biasa untuk lokasi yang lolos.
+  var bulanFilter = f.bulanFilter && f.bulanFilter !== 'ALL' ? f.bulanFilter : null;
 
-  var matchFilter = function (t) {
-    if (t.TAHUN !== year) return false;
-    if (f.bank && f.bank !== 'ALL' && t.BANK !== f.bank) return false;
-    if (f.status && f.status !== 'ALL' && t.STATUS !== f.status) return false;
-    if (f.picAdmin && f.picAdmin !== 'ALL' && t.PIC_ADMIN !== f.picAdmin) return false;
+  var yearRows = all.tagihan.filter(function (t) { return t.TAHUN === year; });
+  var byLokasiAll = groupBy_(yearRows, function (t) { return t.NAMA_LOKASI; });
+
+  var qualifies = {};
+  Object.keys(byLokasiAll).forEach(function (lokasi) {
+    var rowsForLokasi = byLokasiAll[lokasi];
+    var first = rowsForLokasi[0];
+    if (f.bank && f.bank !== 'ALL' && first.BANK !== f.bank) return;
+    if (f.picAdmin && f.picAdmin !== 'ALL' && first.PIC_ADMIN !== f.picAdmin) return;
     if (search) {
-      var hay = (t.NAMA_LOKASI + ' ' + t.PIC_ADMIN + ' ' + (t.KOMODITAS || '')).toLowerCase();
-      if (hay.indexOf(search) === -1) return false;
+      var hay = (lokasi + ' ' + first.PIC_ADMIN + ' ' + (first.KOMODITAS || '')).toLowerCase();
+      if (hay.indexOf(search) === -1) return;
     }
-    return true;
-  };
+    if (f.status && f.status !== 'ALL') {
+      if (bulanFilter) {
+        var rowBulan = rowsForLokasi.filter(function (t) { return t.PERIODE_LABEL === bulanFilter; })[0];
+        if (!rowBulan || rowBulan.STATUS !== f.status) return;
+      } else {
+        var anyMatch = rowsForLokasi.some(function (t) {
+          return kolomBulan.indexOf(t.PERIODE_LABEL) !== -1 && t.STATUS === f.status;
+        });
+        if (!anyMatch) return;
+      }
+    } else if (bulanFilter) {
+      var hasMonth = rowsForLokasi.some(function (t) { return t.PERIODE_LABEL === bulanFilter; });
+      if (!hasMonth) return;
+    }
+    qualifies[lokasi] = true;
+  });
 
-  var relevant = all.tagihan.filter(matchFilter);
-  var byLokasi = groupBy_(relevant, function (t) { return t.NAMA_LOKASI; });
-
-  var rows = Object.keys(byLokasi).map(function (lokasi) {
-    var rowsForLokasi = byLokasi[lokasi];
+  var rows = Object.keys(byLokasiAll).filter(function (lokasi) { return qualifies[lokasi]; }).map(function (lokasi) {
+    var rowsForLokasi = byLokasiAll[lokasi];
     var first = rowsForLokasi[0];
     var byPeriode = {};
     rowsForLokasi.forEach(function (t) { byPeriode[t.PERIODE_LABEL] = t; });
@@ -334,6 +356,12 @@ function buildTagihanRows_(all, f) {
     return { lokasi: lokasi, bank: first.BANK, picAdmin: first.PIC_ADMIN, cells: cells, totalPeriode: totalPeriode };
   });
   rows.sort(function (a, b) { return a.lokasi.localeCompare(b.lokasi); });
+
+  var relevant = yearRows.filter(function (t) {
+    return qualifies[t.NAMA_LOKASI] && kolomBulan.indexOf(t.PERIODE_LABEL) !== -1 &&
+      (!bulanFilter || t.PERIODE_LABEL === bulanFilter);
+  });
+
   return { rows: rows, kolomBulan: kolomBulan, relevant: relevant, year: year };
 }
 
@@ -517,7 +545,16 @@ function getPenggajianData_(all, rekap, payroll, f) {
   trend.forEach(function (t) { t.pct = t.value / maxTrend * 100; });
 
   // Riwayat Penggajian per Client
-  var periodeIdx = f.periodeIdx !== undefined && f.periodeIdx !== '' ? toNumber_(f.periodeIdx) : currentMonthIdx;
+  // Default cerdas: pilih bulan TERAKHIR yang sheet REKAP-nya sudah benar-benar
+  // terisi (bukan langsung bulan kalender berjalan) — supaya panel Riwayat
+  // tidak tampak kosong kalau REKAP bulan ini belum sempat diisi ulang.
+  var latestFilledMonthIdx = 0;
+  for (var mi = 0; mi <= currentMonthIdx; mi++) {
+    var bulanCek = CONFIG.MONTHS[mi];
+    if (rekap.some(function (r) { return (r.MONTHS[bulanCek] || 0) > 0; })) latestFilledMonthIdx = mi;
+  }
+  var periodeIdx = (f.periodeIdx !== undefined && f.periodeIdx !== '' && f.periodeIdx !== null)
+    ? toNumber_(f.periodeIdx) : latestFilledMonthIdx;
   var bulanTerpilih = CONFIG.MONTHS[periodeIdx];
   var bulanSebelumnyaName = periodeIdx > 0 ? CONFIG.MONTHS[periodeIdx - 1] : null;
   var riwayat = buildRiwayat_(rekap, bulanTerpilih, bulanSebelumnyaName, f.searchHistory);

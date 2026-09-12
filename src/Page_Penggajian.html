@@ -192,6 +192,14 @@
           '<td><span class="data-ready">' + App.esc(r.statusData) + '</span></td></tr>';
       }).join('');
       renderPager('histPager', d.riwayat, function (pg) { state.pageHistory = pg; reload(); });
+
+      // Server bisa memilih bulan default sendiri (bulan terakhir yang sheet
+      // REKAP-nya benar-benar terisi) kalau kita belum pernah pilih manual —
+      // samakan tampilan dropdown & state supaya tidak membingungkan.
+      if (state.periodeIdx !== d.riwayat.periodeIdx) {
+        state.periodeIdx = d.riwayat.periodeIdx;
+        periodeHistSel.value = String(d.riwayat.periodeIdx);
+      }
     }
 
     function renderPager(elId, t, onChange) {

@@ -21,6 +21,8 @@
 
       <section class="balance-overview-grid" id="balanceSection"></section>
 
+      <div class="bottom-summary two-col" id="saldoExtras"></div>
+
       <div class="stats-grid six" id="kpiRow1"></div>
       <div class="stats-grid two" id="kpiRow2"></div>
 
@@ -34,7 +36,7 @@
         <div id="top10Wrap"></div>
       </section>
 
-      <div class="bottom-summary" id="bottomSummary"></div>
+      <div class="bottom-summary one-col" id="bottomSummary"></div>
     </main>
   </div>
 
@@ -81,7 +83,7 @@
         kpiCard({ cls: 'violet', txt: '&#9647;' }, 'TOTAL TAGIHAN (YTD)', App.fmtRupiah(k.totalTagihanYtd), k.totalTagihanYtdCount + ' periode tagihan'),
         kpiCard({ cls: 'purple', txt: '&#9673;' }, 'SISA PIUTANG', App.fmtRupiah(k.sisaPiutang), 'Menunggu pembayaran'),
         kpiCard({ cls: 'green', txt: '&check;' }, 'SUDAH TERBAYAR', App.fmtRupiah(k.sudahTerbayar), k.sudahTerbayarCount + ' tagihan lunas'),
-        kpiCard({ cls: 'yellow', txt: '!' }, 'BELUM BAYAR', k.belumBayarCount + ' Data', 'Aksi tagihan mendesak'),
+        kpiCard({ cls: 'yellow', txt: '!' }, 'BELUM BAYAR', App.fmtRupiah(k.belumBayarNominal), k.belumBayarCount + ' Data'),
         kpiCard({ cls: 'cyan', txt: '&#9632;' }, 'MUTASI HARI INI', App.fmtRupiah(k.mutasiHariIni), 'Pemasukan rekening'),
         kpiCard({ cls: 'red', txt: '&#8644;' }, 'BELUM TERALOKASI', k.belumTeralokasi + ' Mutasi', 'Perlu pencocokan lokasi'),
       ].join('');
@@ -159,9 +161,10 @@
     }
 
     function renderBottom(d) {
-      document.getElementById('bottomSummary').innerHTML =
+      document.getElementById('saldoExtras').innerHTML =
         '<div><span>PEMASUKAN BULAN INI</span><strong>' + App.fmtRupiah(d.kpi.pemasukanBulanIni) + '</strong><small>Dari data mutasi seluruh rekening</small></div>' +
-        '<div><span>TOTAL SISA PIUTANG YTD</span><strong>' + App.fmtRupiah(d.kpi.totalSisaPiutangYtd) + '</strong><small>Per Januari&ndash;' + d.bulanBerjalan + '</small></div>' +
+        '<div><span>TOTAL SISA PIUTANG YTD</span><strong>' + App.fmtRupiah(d.kpi.totalSisaPiutangYtd) + '</strong><small>Per Januari&ndash;' + d.bulanBerjalan + '</small></div>';
+      document.getElementById('bottomSummary').innerHTML =
         '<div class="reminder-card"><strong>&#128276; Reminder Penagihan</strong><ul>' +
           '<li>Follow up <b>' + d.reminder.terlambat90 + '</b> client yang terlambat lebih dari 90 hari.</li>' +
           '<li>Lengkapi due date untuk <b>' + d.reminder.belumAdaInvoice + '</b> client yang belum memiliki data invoice.</li>' +

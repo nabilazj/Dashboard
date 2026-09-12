@@ -33,6 +33,7 @@
         <div class="filters" style="margin-top:10px">
           <label class="field"><span>Tahun</span><select id="fTahun"></select></label>
           <label class="field"><span>Bank</span><select id="fBank"><option value="ALL">Semua Bank</option></select></label>
+          <label class="field"><span>Bulan</span><select id="fBulanFilter"><option value="ALL">Semua Bulan</option></select></label>
           <label class="field"><span>Status</span><select id="fStatus"><option value="ALL">Semua Status</option><option>LUNAS</option><option>BELUM BAYAR</option></select></label>
           <label class="field"><span>PIC Admin</span><select id="fPic"><option value="ALL">Semua PIC</option></select></label>
           <label class="field search-field"><span>Pencarian</span><input type="text" id="fSearch" placeholder="Lokasi, PIC, komoditas..."></label>
@@ -61,12 +62,16 @@
     var thisYear = new Date().getFullYear();
     var MONTHS = ['JANUARI','FEBRUARI','MARET','APRIL','MEI','JUNI','JULI','AGUSTUS','SEPTEMBER','OKTOBER','NOVEMBER','DESEMBER'];
     var state = { periodMode: 'TAHUN_BERJALAN', bulan: MONTHS[0], bulanAwal: MONTHS[0], bulanAkhir: MONTHS[0],
-      tahun: thisYear, bank: 'ALL', status: 'ALL', picAdmin: 'ALL', search: '', page: 1 };
+      tahun: thisYear, bank: 'ALL', bulanFilter: 'ALL', status: 'ALL', picAdmin: 'ALL', search: '', page: 1 };
     var optionsLoaded = false;
+
+    document.getElementById('fBulanFilter').innerHTML += MONTHS.concat(['THR']).map(function (m) {
+      return '<option>' + m + '</option>';
+    }).join('');
 
     function currentFilters() {
       return { periodMode: state.periodMode, bulan: state.bulan, bulanAwal: state.bulanAwal, bulanAkhir: state.bulanAkhir,
-        tahun: state.tahun, bank: state.bank, status: state.status, picAdmin: state.picAdmin, search: state.search, page: state.page };
+        tahun: state.tahun, bank: state.bank, bulanFilter: state.bulanFilter, status: state.status, picAdmin: state.picAdmin, search: state.search, page: state.page };
     }
 
     function renderExtraPeriodFilters() {
@@ -184,19 +189,19 @@
       return App.call('apiGetTagihan', f).then(render);
     }
 
-    ['fTahun', 'fBank', 'fStatus', 'fPic'].forEach(function (id) {
+    ['fTahun', 'fBank', 'fBulanFilter', 'fStatus', 'fPic'].forEach(function (id) {
       document.getElementById(id).addEventListener('change', function () {
-        var key = { fTahun: 'tahun', fBank: 'bank', fStatus: 'status', fPic: 'picAdmin' }[id];
+        var key = { fTahun: 'tahun', fBank: 'bank', fBulanFilter: 'bulanFilter', fStatus: 'status', fPic: 'picAdmin' }[id];
         state[key] = id === 'fTahun' ? Number(this.value) : this.value;
         state.page = 1; reload();
       });
     });
     document.getElementById('fSearch').addEventListener('input', App.debounce(function () { state.search = this.value; state.page = 1; reload(); }, 400));
     document.getElementById('btnReset').addEventListener('click', function () {
-      state = { periodMode: 'TAHUN_BERJALAN', bulan: MONTHS[0], bulanAwal: MONTHS[0], bulanAkhir: MONTHS[0], tahun: thisYear, bank: 'ALL', status: 'ALL', picAdmin: 'ALL', search: '', page: 1 };
+      state = { periodMode: 'TAHUN_BERJALAN', bulan: MONTHS[0], bulanAwal: MONTHS[0], bulanAkhir: MONTHS[0], tahun: thisYear, bank: 'ALL', bulanFilter: 'ALL', status: 'ALL', picAdmin: 'ALL', search: '', page: 1 };
       document.querySelectorAll('#periodTabs button').forEach(function (b) { b.classList.toggle('active', b.dataset.mode === 'TAHUN_BERJALAN'); });
       renderExtraPeriodFilters();
-      document.getElementById('fBank').value = 'ALL'; document.getElementById('fStatus').value = 'ALL';
+      document.getElementById('fBank').value = 'ALL'; document.getElementById('fBulanFilter').value = 'ALL'; document.getElementById('fStatus').value = 'ALL';
       document.getElementById('fPic').value = 'ALL'; document.getElementById('fSearch').value = '';
       reload();
     });
