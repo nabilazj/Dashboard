@@ -75,9 +75,18 @@ Page_Penggajian.html- halaman "/penggajian"
 2. Pilih tipe **Web app**.
 3. Isi:
    - **Execute as**: *Me (ptraymitraperkasaofficial@gmail.com)*
-   - **Who has access**: pilih sesuai kebutuhan — **Anyone within [organisasi]**
-     kalau semua tim internal boleh akses tanpa perlu ditambah satu-satu, atau
-     **Only myself** kalau hanya Anda dulu.
+   - **Who has access**: karena `ptraymitraperkasaofficial@gmail.com` adalah
+     akun Gmail biasa (bukan Google Workspace), opsi **"Anyone within
+     [organisasi]"** TIDAK akan muncul/tidak berlaku — itu hanya tersedia
+     untuk akun domain perusahaan (Workspace). Pilih salah satu ini:
+     - **Only myself** — paling aman, hanya akun ini yang bisa buka
+       (default di `appsscript.json` sudah diset ke ini).
+     - **Anyone with Google account** — semua orang yang tahu link bisa
+       buka setelah login Google (cocok kalau tim lain juga perlu akses
+       tanpa Anda tambahkan satu-satu).
+     Kalau pilih selain "Only myself" lewat dialog Deploy, nilai `access`
+     di `appsscript.json` akan otomatis menyesuaikan — tidak perlu edit
+     manual lagi setelah deploy pertama.
 4. Klik **Deploy**. Saat pertama kali, Google akan minta **otorisasi** —
    klik **Authorize access**, pilih akun, lalu **Advanced → Go to (nama
    project) (unsafe) → Allow** (ini normal untuk script buatan sendiri).
