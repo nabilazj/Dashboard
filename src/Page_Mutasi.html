@@ -117,8 +117,9 @@
     }
     function changePage(p) { state.page = p; reload(); }
 
-    function reload() {
-      return App.call('apiGetMutasi', currentFilters()).then(render);
+    function reload(force) {
+      var f = currentFilters(); f.forceRefresh = !!force;
+      return App.call('apiGetMutasi', f).then(render);
     }
 
     ['fBank', 'fCompany', 'fStatus'].forEach(function (id) {

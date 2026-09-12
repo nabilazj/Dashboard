@@ -5,16 +5,16 @@
  * membaca sheet APA ADANYA (berdasarkan NAMA kolom di header, bukan posisi
  * index) supaya tahan terhadap perubahan urutan kolom di sheet sumber.
  *
- * CATATAN CACHING: dataset mentah (ribuan baris TAGIHAN/INVOICE/MUTASI) tidak
- * di-cache lewat CacheService karena ukurannya jauh melebihi batas 100KB per
- * entry. Sebagai gantinya, satu kali doGet() cukup memanggil loadAll_() SEKALI
- * lalu meneruskan hasilnya ke semua fungsi agregasi — bukan membaca ulang
- * sheet berkali-kali dalam satu request.
+ * CACHING: data mentah tiap sheet disimpan sementara lewat Cache.gs supaya
+ * buka halaman ke-2/ke-3 dst tidak perlu baca ulang Spreadsheet (lihat
+ * Cache.gs untuk detail & alasannya). Selain itu, satu kali doGet() cukup
+ * memanggil loadAll_() SEKALI lalu meneruskan hasilnya ke semua fungsi
+ * agregasi — bukan membaca ulang sheet berkali-kali dalam satu request.
  * ---------------------------------------------------------------------------
  */
 
-/** Baca 1 sheet penuh, kembalikan {header:[...], rows:[[...]]} mentah. */
-function readSheetRaw_(spreadsheetId, sheetName) {
+/** Baca 1 sheet penuh (LANGSUNG dari Spreadsheet, tanpa cache), kembalikan {header, rows} mentah. */
+function readSheetRawUncached_(spreadsheetId, sheetName) {
   var ss = SpreadsheetApp.openById(spreadsheetId);
   var sheet = ss.getSheetByName(sheetName);
   if (!sheet) return { header: [], rows: [] };
@@ -29,6 +29,24 @@ function readSheetRaw_(spreadsheetId, sheetName) {
   return { header: header, rows: rows };
 }
 
+/**
+ * Sama seperti readSheetRawUncached_, tapi lewat cache sementara (lihat
+ * Cache.gs) — inilah yang dipakai di seluruh aplikasi supaya buka halaman
+ * ke-2/ke-3 dst tidak perlu baca ulang Sheet kalau masih dalam jendela
+ * CONFIG.CACHE_SECONDS. Nilai Date ikut tersimpan di cache sebagai string
+ * ISO (efek JSON.stringify) — makanya dipulihkan lagi jadi Date di sini
+ * sebelum dikembalikan, supaya pemanggil tidak perlu tahu soal ini.
+ */
+function readSheetRaw_(spreadsheetId, sheetName, forceRefresh) {
+  var raw = withSheetCache_(['sheet', spreadsheetId, sheetName], forceRefresh, function () {
+    return readSheetRawUncached_(spreadsheetId, sheetName);
+  });
+  raw.rows.forEach(function (row) {
+    for (var i = 0; i < row.length; i++) row[i] = reviveDateIfNeeded_(row[i]);
+  });
+  return raw;
+}
+
 /** Ubah {header, rows} jadi array of object {NAMA_KOLOM: nilai}. */
 function rowsToObjects_(raw) {
   var header = raw.header;
@@ -41,16 +59,12 @@ function rowsToObjects_(raw) {
   });
 }
 
-function readSheetAsObjects_(spreadsheetId, sheetName) {
-  return rowsToObjects_(readSheetRaw_(spreadsheetId, sheetName));
+function readSheetAsObjects_(spreadsheetId, sheetName, forceRefresh) {
+  return rowsToObjects_(readSheetRaw_(spreadsheetId, sheetName, forceRefresh));
 }
 
-/**
- * Baca SEMUA baris tanpa menganggap baris pertama sebagai header — dipakai
- * untuk sheet semi-terstruktur (bukan tabel rapi 1 header), seperti sheet
- * bulan di REKAP PENGGAJIAN yang punya beberapa blok section di satu sheet.
- */
-function readSheetAllRows_(spreadsheetId, sheetName) {
+/** Sama seperti readSheetAllRows_, tapi LANGSUNG dari Spreadsheet tanpa cache. */
+function readSheetAllRowsUncached_(spreadsheetId, sheetName) {
   var ss = SpreadsheetApp.openById(spreadsheetId);
   var sheet = ss.getSheetByName(sheetName);
   if (!sheet) return [];
@@ -61,15 +75,31 @@ function readSheetAllRows_(spreadsheetId, sheetName) {
 }
 
 /**
+ * Baca SEMUA baris tanpa menganggap baris pertama sebagai header — dipakai
+ * untuk sheet semi-terstruktur (bukan tabel rapi 1 header), seperti sheet
+ * bulan di REKAP PENGGAJIAN yang punya beberapa blok section di satu sheet.
+ * Lewat cache sementara juga (lihat Cache.gs).
+ */
+function readSheetAllRows_(spreadsheetId, sheetName, forceRefresh) {
+  var rows = withSheetCache_(['allrows', spreadsheetId, sheetName], forceRefresh, function () {
+    return readSheetAllRowsUncached_(spreadsheetId, sheetName);
+  });
+  rows.forEach(function (row) {
+    for (var i = 0; i < row.length; i++) row[i] = reviveDateIfNeeded_(row[i]);
+  });
+  return rows;
+}
+
+/**
  * Muat & normalisasi SEMUA data dari MASTER DATA + REKAP PENGGAJIAN dalam
  * satu paket. Dipanggil sekali per request oleh doGet()/API.
  */
-function loadAll_() {
-  var tagihanRaw = readSheetAsObjects_(CONFIG.MASTER_DATA_ID, CONFIG.SHEET_TAGIHAN);
-  var mutasiRaw = readSheetAsObjects_(CONFIG.MASTER_DATA_ID, CONFIG.SHEET_MUTASI);
-  var invoiceRaw = readSheetAsObjects_(CONFIG.MASTER_DATA_ID, CONFIG.SHEET_INVOICE);
-  var saldoRaw = readSheetAsObjects_(CONFIG.MASTER_DATA_ID, CONFIG.SHEET_SALDO);
-  var masterClientRaw = readSheetAsObjects_(CONFIG.MASTER_DATA_ID, CONFIG.SHEET_MASTER_CLIENT);
+function loadAll_(forceRefresh) {
+  var tagihanRaw = readSheetAsObjects_(CONFIG.MASTER_DATA_ID, CONFIG.SHEET_TAGIHAN, forceRefresh);
+  var mutasiRaw = readSheetAsObjects_(CONFIG.MASTER_DATA_ID, CONFIG.SHEET_MUTASI, forceRefresh);
+  var invoiceRaw = readSheetAsObjects_(CONFIG.MASTER_DATA_ID, CONFIG.SHEET_INVOICE, forceRefresh);
+  var saldoRaw = readSheetAsObjects_(CONFIG.MASTER_DATA_ID, CONFIG.SHEET_SALDO, forceRefresh);
+  var masterClientRaw = readSheetAsObjects_(CONFIG.MASTER_DATA_ID, CONFIG.SHEET_MASTER_CLIENT, forceRefresh);
 
   var tagihan = tagihanRaw
     .map(normalizeTagihanRow_)
@@ -220,8 +250,8 @@ function normalizeInvoiceRow_(r, termOverride, today) {
  * REKAP: matrix NO, NAMA CLIENT, JANUARI..DESEMBER (nominal gaji per bulan).
  * Sumber "Riwayat Penggajian per Client".
  */
-function loadRekapPenggajian_() {
-  var raw = readSheetAsObjects_(CONFIG.PAYROLL_ID, CONFIG.SHEET_REKAP);
+function loadRekapPenggajian_(forceRefresh) {
+  var raw = readSheetAsObjects_(CONFIG.PAYROLL_ID, CONFIG.SHEET_REKAP, forceRefresh);
   return raw
     .filter(function (r) { return String(r['NAMA CLIENT'] || '').trim() && safeUpper_(r['NAMA CLIENT']) !== 'TOTAL'; })
     .map(function (r) {
@@ -237,8 +267,8 @@ function loadRekapPenggajian_() {
  *   2) "JADWAL PENGGAJIAN"        -> NO,TANGGAL,NAMA CLIENT,REKAP,NOMINAL,BANK
  * Fungsi ini mem-parse KEDUA blok dari SATU nama sheet bulan.
  */
-function parsePayrollMonthSheet_(sheetName) {
-  var rows = readSheetAllRows_(CONFIG.PAYROLL_ID, sheetName);
+function parsePayrollMonthSheet_(sheetName, forceRefresh) {
+  var rows = readSheetAllRows_(CONFIG.PAYROLL_ID, sheetName, forceRefresh);
   var paid = [];       // {tanggal:Date, nominal:number}
   var schedule = [];    // {tanggal:Date, client, pic, nominal, bank, sheet}
 
@@ -284,10 +314,12 @@ function parsePayrollMonthSheet_(sheetName) {
  * Gabungkan seluruh sheet bulan yang ADA (tidak semua 12+THR pasti dibuat,
  * bulan yang belum tiba wajar belum ada sheet-nya).
  */
-function loadPayrollSchedule_() {
-  var ss = SpreadsheetApp.openById(CONFIG.PAYROLL_ID);
+function loadPayrollSchedule_(forceRefresh) {
+  var sheetNames = withSheetCache_(['sheetnames', CONFIG.PAYROLL_ID], forceRefresh, function () {
+    return SpreadsheetApp.openById(CONFIG.PAYROLL_ID).getSheets().map(function (sh) { return sh.getName(); });
+  });
   var existing = {};
-  ss.getSheets().forEach(function (sh) { existing[sh.getName()] = true; });
+  sheetNames.forEach(function (n) { existing[n] = true; });
 
   var monthSheets = CONFIG.MONTHS.filter(function (m) { return existing[m]; });
   if (existing['THR']) monthSheets.push('THR');
@@ -295,7 +327,7 @@ function loadPayrollSchedule_() {
   var allSchedule = [];
   var allPaid = [];
   monthSheets.forEach(function (name) {
-    var parsed = parsePayrollMonthSheet_(name);
+    var parsed = parsePayrollMonthSheet_(name, forceRefresh);
     allSchedule = allSchedule.concat(parsed.schedule);
     allPaid = allPaid.concat(parsed.paid);
   });

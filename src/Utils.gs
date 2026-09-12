@@ -35,6 +35,19 @@ function toDate_(v) {
   return null;
 }
 
+var ISO_DATE_RE_ = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+
+/**
+ * Setelah data mentah pulang-pergi lewat cache (JSON.stringify/parse), nilai
+ * Date berubah jadi string ISO ("2026-01-01T00:00:00.000Z"). Fungsi ini
+ * mengembalikannya jadi Date lagi; nilai lain (angka, teks biasa) dibiarkan
+ * apa adanya.
+ */
+function reviveDateIfNeeded_(v) {
+  if (typeof v === 'string' && ISO_DATE_RE_.test(v)) return new Date(v);
+  return v;
+}
+
 function stripTime_(d) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }

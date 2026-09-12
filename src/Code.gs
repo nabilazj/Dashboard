@@ -55,30 +55,36 @@ function scriptUrl_() {
  * google.script.run.withSuccessHandler(...).apiXxx(filters)                            */
 
 function apiGetDashboard(filters) {
-  var all = loadAll_();
+  var force = !!(filters && filters.forceRefresh);
+  var all = loadAll_(force);
   return getDashboardData_(all);
 }
 
 function apiGetMutasi(filters) {
-  var all = loadAll_();
-  return getMutasiData_(all, filters || {});
+  filters = filters || {};
+  var all = loadAll_(!!filters.forceRefresh);
+  return getMutasiData_(all, filters);
 }
 
 function apiGetTagihan(filters) {
-  var all = loadAll_();
-  return getTagihanData_(all, filters || {});
+  filters = filters || {};
+  var all = loadAll_(!!filters.forceRefresh);
+  return getTagihanData_(all, filters);
 }
 
 function apiGetInvoice(filters) {
-  var all = loadAll_();
-  return getInvoiceData_(all, filters || {});
+  filters = filters || {};
+  var all = loadAll_(!!filters.forceRefresh);
+  return getInvoiceData_(all, filters);
 }
 
 function apiGetPenggajian(filters) {
-  var all = loadAll_();
-  var rekap = loadRekapPenggajian_();
-  var payroll = loadPayrollSchedule_();
-  return getPenggajianData_(all, rekap, payroll, filters || {});
+  filters = filters || {};
+  var force = !!filters.forceRefresh;
+  var all = loadAll_(force);
+  var rekap = loadRekapPenggajian_(force);
+  var payroll = loadPayrollSchedule_(force);
+  return getPenggajianData_(all, rekap, payroll, filters);
 }
 
 /* ================================ EXPORT CSV & PDF =================================== */

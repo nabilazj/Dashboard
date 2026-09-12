@@ -51,10 +51,14 @@ const CONFIG = {
     'CAKRA': 'PT CAKRA BCA',
   },
 
-  // Cache hasil agregasi (detik). Data mentah SELALU dibaca langsung dari
-  // Sheet tiap request (tidak di-cache) karena ukurannya melebihi batas
-  // CacheService (100KB/entry) — lihat DataLayer.gs.
-  CACHE_SECONDS: 60,
+  // Berapa lama data mentah tiap sheet disimpan di cache sementara
+  // (CacheService, lihat Cache.gs) sebelum dibaca ulang dari Spreadsheet.
+  // Sedikit lebih lama dari interval polling frontend (60 detik) supaya
+  // kebanyakan siklus polling & perpindahan antar halaman kena cache hit.
+  // Perbesar kalau ingin lebih cepat tapi kurang real-time; perkecil kalau
+  // sebaliknya. Tombol "Perbarui data sekarang" di topbar SELALU melewati
+  // cache ini (forceRefresh) berapapun nilainya.
+  CACHE_SECONDS: 120,
 
   // Jumlah baris per halaman untuk tabel dengan pagination server-side.
   PAGE_SIZE: 25,

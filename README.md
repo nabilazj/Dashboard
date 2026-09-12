@@ -36,6 +36,7 @@ arahan Anda, gunakan akun `ptraymitraperkasaofficial@gmail.com`.
 appsscript.json     - manifest project (timezone, izin web app)
 Config.gs           - SEMUA konstanta (ID spreadsheet, nama sheet, asumsi)
 Utils.gs            - helper murni (format Rupiah, tanggal, dll — tanpa akses Sheet)
+Cache.gs            - cache sementara (CacheService) supaya buka halaman ke-2/3/dst lebih cepat
 DataLayer.gs        - satu-satunya file yang menyentuh SpreadsheetApp
 Aggregations.gs     - rumus KPI & agregasi tiap halaman
 Export.gs           - generator CSV & PDF asli
@@ -156,6 +157,40 @@ sudah diperbaiki:
 - **Ekspor CSV/PDF** — di sini benar-benar mengunduh file, bukan sekadar
   tombol dekoratif.
 
+## Caching (Supaya Buka Halaman ke-2/3/dst Lebih Cepat)
+
+Bagian paling lambat dari tiap kali buka halaman adalah **membaca ulang
+Sheet** (TAGIHAN ~3.000 baris, INVOICE ~2.000, MUTASI ~2.800, dst). Sekarang
+data mentah tiap sheet disimpan sementara lewat `CacheService` (lihat
+`src/Cache.gs`):
+
+- Cache berlaku **120 detik** (`CONFIG.CACHE_SECONDS` di `Config.gs`, ubah
+  di situ kalau mau lebih cepat/lebih real-time).
+- Selama masih dalam 120 detik itu, buka halaman Tagihan lalu Mutasi lalu
+  Invoice dst **tidak perlu baca ulang Spreadsheet** — tinggal ambil dari
+  cache (jauh lebih cepat, biasanya di bawah setengah detik untuk bagian
+  ambil datanya).
+- Setelah 120 detik, pembacaan berikutnya otomatis ambil data segar dari
+  Sheet lagi (dan cache-nya diperbarui).
+- Karena data mentah tiap sheet bisa lebih dari 100KB (batas 1 entry
+  CacheService), datanya **dipecah jadi beberapa potongan** lalu digabung
+  lagi saat dibaca — ini otomatis, tidak perlu diapa-apakan.
+- Tombol **"Perbarui data sekarang"** di kanan atas tiap halaman **selalu
+  melewati cache** (ambil langsung dari Sheet saat itu juga) — pakai ini
+  kalau Anda baru saja edit Sheet dan ingin lihat perubahannya seketika
+  tanpa menunggu.
+- Kalau cache gagal ditulis/dibaca karena sebab apapun, aplikasi otomatis
+  jatuh kembali baca langsung dari Sheet — cache murni mempercepat, bukan
+  syarat aplikasi bisa jalan.
+
+**Perhatian**: karena data dibagi ke banyak pengguna lewat cache yang sama,
+kalau dua orang buka dashboard dalam jendela 120 detik yang sama, orang
+kedua akan melihat data se-segar terakhir kali cache ditulis (maksimal
+120 detik lebih lama) — bukan detik itu juga. Untuk dashboard monitoring
+internal, ini trade-off yang wajar; kalau Anda butuh selalu real-time
+walau lebih lambat, kecilkan `CACHE_SECONDS` jadi misalnya `20` atau `0`
+(0 = cache dimatikan efektif, karena TTL sekejap).
+
 ## Keterbatasan Platform (bukan pilihan desain)
 
 - **URL**: Apps Script Web App cuma punya 1 URL. Navigasi antar halaman
@@ -163,11 +198,10 @@ sudah diperbaiki:
   platform Apps Script, bukan hasil desain ulang.
 - **PDF**: dibatasi 500 baris pertama per ekspor (batas wajar untuk waktu
   eksekusi Apps Script). Untuk data lebih dari itu, gunakan Ekspor CSV.
-- **Performa**: setiap request membaca ulang Sheet langsung (tidak
-  di-cache) karena ukuran data melebihi batas CacheService. Untuk dataset
-  saat ini (~3.000 baris tagihan, ~2.000 invoice) waktu muat biasanya di
-  bawah 2 detik — kalau data bertambah sangat besar di masa depan, beri
-  tahu saya untuk menambah caching bertingkat.
+- **Performa**: lihat bagian "Caching" di atas — permintaan pertama (atau
+  setelah cache 120 detik kadaluarsa) tetap butuh baca Sheet langsung
+  (biasanya di bawah 2 detik untuk dataset saat ini), permintaan berikutnya
+  dalam jendela cache jauh lebih cepat.
 
 ## Troubleshooting
 
@@ -176,7 +210,7 @@ sudah diperbaiki:
 | Halaman blank / error "Script function not found" | Nama file di editor Apps Script tidak persis sama | Cek ulang nama file (case-sensitive, tanpa spasi) |
 | Semua angka Rp 0 | Akun deploy tidak punya akses ke spreadsheet sumber | Pastikan akun yang deploy adalah Viewer/Editor di kedua spreadsheet |
 | "Exception: You do not have permission to call SpreadsheetApp.openById" | Otorisasi belum di-approve penuh | Deploy ulang → Authorize access → Advanced → Go to (unsafe) → Allow |
-| Data tidak berubah setelah edit Sheet | Masih dalam jendela polling 60 detik, atau versi deployment lama | Tunggu 60 detik / klik tombol status kanan atas, dan pastikan sudah "New version" saat deploy ulang |
+| Data tidak berubah setelah edit Sheet | Masih dalam jendela cache 120 detik (lihat bagian "Caching"), atau versi deployment lama | Klik tombol status kanan atas ("Perbarui data sekarang") untuk lewati cache seketika, dan pastikan sudah "New version" saat deploy ulang |
 | Tombol PDF lambat / timeout | Data terfilter sangat banyak | Persempit filter dulu, atau gunakan CSV untuk data besar |
 
 ---

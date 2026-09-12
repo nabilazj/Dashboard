@@ -88,16 +88,21 @@
     }
 
     /**
-     * Jalankan loadFn() sekarang, lalu ulangi tiap 60 detik (meniru perilaku
-     * polling versi asli), plus saat tab kembali aktif. loadFn HARUS
-     * mengembalikan Promise.
+     * Jalankan loadFn(forceRefresh) sekarang, lalu ulangi tiap 60 detik
+     * (meniru perilaku polling versi asli), plus saat tab kembali aktif.
+     * loadFn HARUS mengembalikan Promise dan menerima 1 argumen boolean
+     * `forceRefresh` yang diteruskan sebagai filters.forceRefresh ke server
+     * (lihat Cache.gs) — dipakai oleh tombol "Perbarui data sekarang" di
+     * topbar supaya klik manual SELALU melewati cache sementara, sementara
+     * polling otomatis tiap 60 detik boleh kena cache hit (lebih cepat).
      */
     function setupPolling(loadFn) {
       var running = false;
-      function run() {
+      function run(force) {
         if (running) return;
         running = true;
-        loadFn()
+        if (force) setSyncLabel_('Memperbarui data&hellip;');
+        loadFn(!!force)
           .then(function () {
             setSyncDot_(true);
             setSyncLabel_('MASTER DATA &middot; ' + new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }));
@@ -110,10 +115,10 @@
           .then(function () { running = false; });
       }
       window.__refreshNow = run;
-      run();
-      setInterval(run, 60000);
+      run(false);
+      setInterval(function () { run(false); }, 60000);
       document.addEventListener('visibilitychange', function () {
-        if (document.visibilityState === 'visible') run();
+        if (document.visibilityState === 'visible') run(false);
       });
     }
 

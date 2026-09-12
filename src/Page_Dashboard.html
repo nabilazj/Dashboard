@@ -169,8 +169,8 @@
         '</ul></div>';
     }
 
-    function loadDashboard() {
-      return App.call('apiGetDashboard', {}).then(function (d) {
+    function loadDashboard(force) {
+      return App.call('apiGetDashboard', { forceRefresh: !!force }).then(function (d) {
         renderBalance(d); renderKpi(d); renderCharts(d); renderTop10(d); renderBottom(d);
       });
     }

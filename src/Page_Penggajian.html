@@ -202,7 +202,10 @@
         '<button ' + (t.page >= t.totalPages ? 'disabled' : '') + ' onclick="__pg_' + elId + '(' + (t.page + 1) + ')">&rsaquo;</button>';
     }
 
-    function reload() { return App.call('apiGetPenggajian', currentFilters()).then(render); }
+    function reload(force) {
+      var f = currentFilters(); f.forceRefresh = !!force;
+      return App.call('apiGetPenggajian', f).then(render);
+    }
 
     ['fRentang', 'fStatus', 'fBank', 'fPic'].forEach(function (id) {
       document.getElementById(id).addEventListener('change', function () {
