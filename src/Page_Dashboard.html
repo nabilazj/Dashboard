@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <?!= include('Style'); ?>
+</head>
+<body>
+  <button class="mobile-menu" aria-label="Buka menu">&#9776;</button>
+  <div class="app-shell">
+    <?!= include('Sidebar', {activePage: 'dashboard', scriptUrl: scriptUrl}); ?>
+    <main class="main-area">
+      <?!= include('Topbar', {
+        title: 'DASHBOARD PIUTANG CLIENT',
+        subtitle: 'Monitoring Tagihan, Pembayaran & Mutasi Bank',
+        eyebrow: 'POSISI KAS TERKINI',
+        sectionTitle: 'Saldo Rekening Perusahaan',
+        note: 'Otomatis dari MASTER DATA · SALDO',
+        showActions: true
+      }); ?>
+
+      <section class="balance-overview-grid" id="balanceSection"></section>
+
+      <div class="stats-grid six" id="kpiRow1"></div>
+      <div class="stats-grid two" id="kpiRow2"></div>
+
+      <div class="dashboard-grid" id="chartGrid"></div>
+
+      <section class="panel top-aging-panel">
+        <div class="panel-head">
+          <h2>TOP 10 CLIENT DENGAN TAGIHAN TERLAMA</h2>
+          <a class="panel-link" href="<?= scriptUrl ?>?page=tagihan">Lihat halaman Tagihan &rarr;</a>
+        </div>
+        <div id="top10Wrap"></div>
+      </section>
+
+      <div class="bottom-summary" id="bottomSummary"></div>
+    </main>
+  </div>
+
+  <?!= include('ClientScript'); ?>
+  <script>
+    function renderBalance(d) {
+      var s = d.saldo;
+      var companyCards = s.perusahaan.map(function (p, i) {
+        var icon = i === 0 ? 'cyan' : 'green';
+        var letter = p.nama.replace('PT ', '').charAt(0);
+        return '<article class="stat-card"><div class="stat-icon ' + icon + '">' + App.esc(letter) + '</div>' +
+          '<div><span>' + App.esc(p.nama.toUpperCase()) + '</span><strong>' + App.fmtRupiah(p.total) + '</strong>' +
+          '<small>' + p.jumlahRekening + ' rekening</small></div></article>';
+      }).join('');
+
+      var rows = s.rekening.map(function (r) {
+        return '<tr><td class="account-name"><span>' + App.esc(r.rekening) + '</span></td>' +
+          '<td class="company">' + App.esc(r.perusahaan) + '</td>' +
+          '<td class="balance-amount">' + App.fmtRupiah(r.saldo) + '</td></tr>';
+      }).join('');
+
+      document.getElementById('balanceSection').innerHTML =
+        '<div class="balance-summary">' +
+          '<article class="stat-card"><div class="stat-icon purple">&Sigma;</div>' +
+            '<div><span>TOTAL SALDO BANK</span><strong>' + App.fmtRupiah(s.total) + '</strong>' +
+            '<small>' + s.jumlahRekening + ' rekening aktif</small></div></article>' +
+          '<div class="balance-company-grid">' + companyCards + '</div>' +
+        '</div>' +
+        '<section class="panel balance-panel" style="margin-bottom:0">' +
+          '<div class="panel-head"><h2>SALDO REKENING</h2><span class="result-count">' + s.jumlahRekening + ' rekening</span></div>' +
+          '<div class="table-scroll balance-scroll"><table class="data-table balance-table">' +
+          '<thead><tr><th>Rekening</th><th>Perusahaan</th><th>Saldo</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+        '</section>';
+    }
+
+    function kpiCard(icon, label, value, small) {
+      return '<article class="stat-card"><div class="stat-icon ' + icon.cls + '">' + icon.txt + '</div>' +
+        '<div><span>' + App.esc(label) + '</span><strong>' + value + '</strong><small>' + App.esc(small) + '</small></div></article>';
+    }
+
+    function renderKpi(d) {
+      var k = d.kpi;
+      document.getElementById('kpiRow1').innerHTML = [
+        kpiCard({ cls: 'violet', txt: '&#9647;' }, 'TOTAL TAGIHAN (YTD)', App.fmtRupiah(k.totalTagihanYtd), k.totalTagihanYtdCount + ' periode tagihan'),
+        kpiCard({ cls: 'purple', txt: '&#9673;' }, 'SISA PIUTANG', App.fmtRupiah(k.sisaPiutang), 'Menunggu pembayaran'),
+        kpiCard({ cls: 'green', txt: '&check;' }, 'SUDAH TERBAYAR', App.fmtRupiah(k.sudahTerbayar), k.sudahTerbayarCount + ' tagihan lunas'),
+        kpiCard({ cls: 'yellow', txt: '!' }, 'BELUM BAYAR', k.belumBayarCount + ' Data', 'Aksi tagihan mendesak'),
+        kpiCard({ cls: 'cyan', txt: '&#9632;' }, 'MUTASI HARI INI', App.fmtRupiah(k.mutasiHariIni), 'Pemasukan rekening'),
+        kpiCard({ cls: 'red', txt: '&#8644;' }, 'BELUM TERALOKASI', k.belumTeralokasi + ' Mutasi', 'Perlu pencocokan lokasi'),
+      ].join('');
+      document.getElementById('kpiRow2').innerHTML = [
+        kpiCard({ cls: 'violet', txt: 'Rp' }, 'TOTAL PIUTANG CLIENT', App.fmtRupiah(k.totalPiutangClient), 'Seluruh piutang sampai ' + d.bulanBerjalan + ' ' + d.tahun),
+        kpiCard({ cls: 'red', txt: '&Sigma;' }, 'CLIENT TERLAMBAT', k.clientTerlambatCount + ' Client', k.clientTerlambatTagihanCount + ' tagihan belum bayar dari data TAGIHAN'),
+      ].join('');
+    }
+
+    function renderCharts(d) {
+      var maxBar = Math.max.apply(null, d.trend.map(function (t) { return Math.max(t.invoicePct, t.paidPct); }).concat([1]));
+      var bars = d.trend.map(function (t) {
+        return '<div class="bar-group"><div class="bars">' +
+          '<i class="invoice" style="height:' + t.invoicePct + '%"></i>' +
+          '<i class="paid" style="height:' + t.paidPct + '%"></i>' +
+          '</div><span>' + t.label + '</span></div>';
+      }).join('');
+
+      var bankTotal = d.donutBank.reduce(function (a, b) { return a + b.value; }, 0);
+      var acc = 0;
+      var gradientParts = d.donutBank.map(function (b) {
+        var start = acc, pct = bankTotal > 0 ? (b.value / bankTotal * 100) : 0;
+        acc += pct;
+        return b.color + ' ' + start + '% ' + acc + '%';
+      });
+      var donutBg = gradientParts.length ? 'conic-gradient(' + gradientParts.join(',') + ')' : '#e7eaf2';
+      var bankLegend = d.donutBank.map(function (b) {
+        var pct = bankTotal > 0 ? Math.round(b.value / bankTotal * 100) : 0;
+        return '<span><span class="sw" style="background:' + b.color + '"></span>' + App.esc(b.label) + ' ' + pct + '%</span>';
+      }).join('');
+
+      var picBars = d.picBar.map(function (p) {
+        return '<div class="hbar-row"><div class="hbar-label"><span>' + App.esc(p.label) + '</span><strong>' + App.fmtRupiah(p.value) + '</strong></div>' +
+          '<div class="hbar-track"><div class="hbar-fill" style="width:' + p.pct + '%;background:' + p.color + '"></div></div></div>';
+      }).join('');
+
+      var st = d.statusDonut;
+      var pct = st.pctLunas === null ? 0 : st.pctLunas;
+      var statusLabel = st.pctLunas === null ? '&mdash;' : pct + '%';
+      var statusBg = st.pctLunas === null ? '#e7eaf2' : 'conic-gradient(#10c79a 0 ' + pct + '%, #f15b50 ' + pct + '% 100%)';
+
+      document.getElementById('chartGrid').innerHTML =
+        '<section class="panel trend-panel"><div class="panel-head"><h2>TREND TAGIHAN &amp; PEMBAYARAN (' + d.tahun + ')</h2></div>' +
+          '<div class="legend"><span><i class="lg invoice"></i>Tagihan</span><span><i class="lg paid"></i>Terbayar</span></div>' +
+          '<div class="bar-chart">' + bars + '</div></section>' +
+        '<section class="panel"><div class="panel-head"><h2>SISA PIUTANG BERDASARKAN BANK</h2></div>' +
+          '<div class="donut-wrap"><div class="donut" style="background:' + donutBg + '"><span>' + App.fmtRupiah(bankTotal) + '</span></div>' +
+          '<div class="donut-legend">' + bankLegend + '</div></div></section>' +
+        '<section class="panel"><div class="panel-head"><h2>SISA PIUTANG BERDASARKAN PIC ADMIN</h2></div>' +
+          '<div class="horizontal-bars">' + (picBars || '<div class="empty-state">Belum ada data.</div>') + '</div></section>' +
+        '<section class="panel"><div class="panel-head"><h2>STATUS TAGIHAN</h2></div>' +
+          '<div class="status-chart"><div class="status-donut" style="background:' + statusBg + '"><span>' + statusLabel + '<small>Lunas</small></span></div>' +
+          '<div class="status-legend"><span><i class="green-dot"></i>Lunas <b>' + st.lunas + '</b></span>' +
+          '<span><i class="red-dot"></i>Belum Bayar <b>' + st.belumBayar + '</b></span></div></div></section>';
+    }
+
+    function renderTop10(d) {
+      if (!d.top10.length) {
+        document.getElementById('top10Wrap').innerHTML = '<div class="empty-state success-empty">Belum ada client dengan tagihan belum bayar.</div>';
+        return;
+      }
+      var rows = d.top10.map(function (c, i) {
+        var badgeCls = (c.terlambatHari || 0) > 90 ? 'critical' : '';
+        return '<tr><td>' + (i + 1) + '</td>' +
+          '<td>' + App.esc(c.client) + '<small style="display:block;color:var(--muted);font-size:10.5px;">PIC: ' + App.esc(c.pic) + '</small></td>' +
+          '<td><strong>' + c.jumlahBulanBelumBayar + ' bulan</strong><br><small style="color:var(--muted)">' + App.esc(c.daftarBulan) + '</small></td>' +
+          '<td>' + c.jumlahTagihan + ' Tagihan</td>' +
+          '<td><span class="aging-badge ' + badgeCls + '">' + (c.terlambatHari === null ? '-' : c.terlambatHari + ' hari') + '</span>' +
+          '<small>Due date: ' + App.esc(c.jatuhTempo) + '</small></td>' +
+          '<td><strong>' + App.fmtRupiah(c.totalSisaPiutang) + '</strong></td></tr>';
+      }).join('');
+      document.getElementById('top10Wrap').innerHTML =
+        '<div class="table-scroll"><table class="data-table"><thead><tr><th>No</th><th>Client</th><th>Bulan Belum Bayar</th>' +
+        '<th>Jumlah Tagihan</th><th>Jatuh Tempo &amp; Terlambat</th><th>Total Sisa Piutang</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+    }
+
+    function renderBottom(d) {
+      document.getElementById('bottomSummary').innerHTML =
+        '<div><span>PEMASUKAN BULAN INI</span><strong>' + App.fmtRupiah(d.kpi.pemasukanBulanIni) + '</strong><small>Dari data mutasi seluruh rekening</small></div>' +
+        '<div><span>TOTAL SISA PIUTANG YTD</span><strong>' + App.fmtRupiah(d.kpi.totalSisaPiutangYtd) + '</strong><small>Per Januari&ndash;' + d.bulanBerjalan + '</small></div>' +
+        '<div class="reminder-card"><strong>&#128276; Reminder Penagihan</strong><ul>' +
+          '<li>Follow up <b>' + d.reminder.terlambat90 + '</b> client yang terlambat lebih dari 90 hari.</li>' +
+          '<li>Lengkapi due date untuk <b>' + d.reminder.belumAdaInvoice + '</b> client yang belum memiliki data invoice.</li>' +
+          '<li>Cocokkan <b>' + d.reminder.belumTeralokasi + '</b> mutasi yang belum teralokasi.</li>' +
+        '</ul></div>';
+    }
+
+    function loadDashboard() {
+      return App.call('apiGetDashboard', {}).then(function (d) {
+        renderBalance(d); renderKpi(d); renderCharts(d); renderTop10(d); renderBottom(d);
+      });
+    }
+    App.setupExport('dashboard', function () { return {}; });
+    App.setupPolling(loadDashboard);
+  </script>
+</body>
+</html>

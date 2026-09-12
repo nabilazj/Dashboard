@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <?!= include('Style'); ?>
+</head>
+<body>
+  <button class="mobile-menu" aria-label="Buka menu">&#9776;</button>
+  <div class="app-shell">
+    <?!= include('Sidebar', {activePage: 'invoice', scriptUrl: scriptUrl}); ?>
+    <main class="main-area">
+      <?!= include('Topbar', {
+        title: 'MONITORING INVOICE CLIENT',
+        subtitle: 'Pengiriman invoice, jatuh tempo & aging pembayaran',
+        eyebrow: 'INVOICE',
+        sectionTitle: 'Monitoring invoice terkirim',
+        note: 'Termin awal menggunakan standar 30 hari dan dapat disesuaikan per client (lihat MASTER_CLIENT).',
+        showActions: true
+      }); ?>
+
+      <div class="stats-grid four" id="kpiRow"></div>
+
+      <section class="panel filter-panel">
+        <div class="filters">
+          <label class="field"><span>Periode</span><select id="fPeriode"><option value="ALL">Semua Periode</option></select></label>
+          <label class="field"><span>Status Invoice</span>
+            <select id="fStatus"><option value="ALL">Semua Status</option><option>LUNAS</option><option>BELUM COCOK TAGIHAN</option><option>BELUM BAYAR</option></select>
+          </label>
+          <label class="field"><span>Aging</span><select id="fAging"><option value="ALL">Semua Aging</option></select></label>
+          <label class="field"><span>PIC</span><select id="fPic"><option value="ALL">Semua PIC</option></select></label>
+          <label class="field search-field"><span>Pencarian</span><input type="text" id="fSearch" placeholder="Client, PIC, keterangan..."></label>
+          <button class="btn reset" id="btnReset">&#8635; Reset</button>
+        </div>
+      </section>
+
+      <section class="panel table-panel">
+        <div class="panel-head"><h2>DATA INVOICE</h2><span class="result-count" id="countLabel">0 data</span></div>
+        <div class="table-scroll">
+          <table class="data-table invoice-table">
+            <thead><tr><th>No</th><th>Client</th><th>Periode</th><th>PIC</th><th>Tanggal Terkirim</th><th>Jatuh Tempo</th>
+              <th>Nominal</th><th>Status</th><th>Sisa Piutang</th><th>Umur</th><th>Terlambat</th><th>Aging</th><th>Status Data</th></tr></thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+        <div id="emptyState"></div>
+        <div class="pager" id="pager"></div>
+      </section>
+    </main>
+  </div>
+
+  <?!= include('ClientScript'); ?>
+  <script>
+    var state = { periode: 'ALL', status: 'ALL', aging: 'ALL', pic: 'ALL', search: '', page: 1 };
+    var optionsLoaded = false;
+
+    function currentFilters() { return Object.assign({}, state); }
+
+    function fillOptions(opts) {
+      if (optionsLoaded) return;
+      optionsLoaded = true;
+      var pSel = document.getElementById('fPeriode');
+      opts.periode.forEach(function (m) { pSel.innerHTML += '<option>' + m + '</option>'; });
+      var aSel = document.getElementById('fAging');
+      opts.aging.forEach(function (a) { aSel.innerHTML += '<option>' + App.esc(a) + '</option>'; });
+      var picSel = document.getElementById('fPic');
+      opts.pic.forEach(function (p) { picSel.innerHTML += '<option>' + App.esc(p) + '</option>'; });
+    }
+
+    function kpiCard(icon, label, value, small) {
+      return '<article class="stat-card"><div class="stat-icon ' + icon.cls + '">' + icon.txt + '</div>' +
+        '<div><span>' + App.esc(label) + '</span><strong>' + value + '</strong><small>' + App.esc(small) + '</small></div></article>';
+    }
+
+    function statusClass(s) {
+      if (s === 'LUNAS') return 'lunas';
+      if (s === 'BELUM COCOK TAGIHAN') return 'belum-cocok-tagihan';
+      return 'belum-bayar';
+    }
+    function agingClass(a) {
+      if (a === 'LUNAS') return '';
+      if (a === '> 120 HARI' || a === '91 - 120 HARI') return 'critical';
+      if (a === '61 - 90 HARI' || a === '31 - 60 HARI') return 'warning';
+      return '';
+    }
+    // Perbaikan bug dari versi asli: badge Status Data sekarang benar-benar
+    // berubah warna (hijau vs oranye) sesuai isinya, bukan selalu hijau.
+    function statusDataClass(sd) { return sd === 'SIAP' ? 'data-ready' : 'data-review'; }
+
+    function render(d) {
+      fillOptions(d.filterOptions);
+      var k = d.kpi;
+      document.getElementById('kpiRow').innerHTML = [
+        kpiCard({ cls: 'violet', txt: '&#9656;' }, 'TOTAL DATA INVOICE', k.totalDataInvoice + ' Data', 'Data yang sudah masuk master'),
+        kpiCard({ cls: 'green', txt: '&check;' }, 'INVOICE TERKIRIM', k.invoiceTerkirim + ' Data', 'Memiliki tanggal pengiriman'),
+        kpiCard({ cls: 'yellow', txt: '&#8987;' }, 'LAMA BELUM DIBAYAR', k.lamaBelumDibayar + ' Invoice', 'Terlambat lebih dari 30 hari'),
+        kpiCard({ cls: 'yellow', txt: '?' }, 'PERLU VALIDASI', k.perluValidasi + ' Data', 'Mapping atau data belum lengkap'),
+      ].join('');
+
+      document.getElementById('countLabel').textContent = d.table.total + ' data';
+      var rows = d.table.rows.map(function (r) {
+        return '<tr><td>' + r.no + '</td><td class="location">' + App.esc(r.client) + '</td><td>' + App.esc(r.periode) + '</td><td>' + App.esc(r.pic) + '</td>' +
+          '<td>' + r.tanggalTerkirim + '</td><td>' + r.jatuhTempo + '</td>' +
+          '<td class="total-cell">' + App.fmtRupiah(r.nominal) + '</td>' +
+          '<td><span class="invoice-status ' + statusClass(r.status) + '">' + App.esc(r.status) + '</span></td>' +
+          '<td>' + App.fmtRupiah(r.sisaPiutang) + '</td><td>' + r.umur + ' hari</td><td>' + r.terlambat + ' hari</td>' +
+          '<td><span class="aging-pill ' + agingClass(r.aging) + '">' + App.esc(r.aging) + '</span></td>' +
+          '<td><span class="' + statusDataClass(r.statusData) + '">' + App.esc(r.statusData) + '</span></td></tr>';
+      }).join('');
+      document.getElementById('tbody').innerHTML = rows;
+      document.getElementById('emptyState').innerHTML = d.table.total === 0 ? '<div class="empty-state">Tidak ada invoice yang sesuai filter.</div>' : '';
+      renderPager(d.table);
+    }
+
+    function renderPager(t) {
+      document.getElementById('pager').innerHTML =
+        '<button ' + (t.page <= 1 ? 'disabled' : '') + ' onclick="changePage(' + (t.page - 1) + ')">&lsaquo;</button>' +
+        '<span>Halaman ' + t.page + ' dari ' + t.totalPages + '</span>' +
+        '<button ' + (t.page >= t.totalPages ? 'disabled' : '') + ' onclick="changePage(' + (t.page + 1) + ')">&rsaquo;</button>';
+    }
+    function changePage(p) { state.page = p; reload(); }
+
+    function reload() { return App.call('apiGetInvoice', currentFilters()).then(render); }
+
+    ['fPeriode', 'fStatus', 'fAging', 'fPic'].forEach(function (id) {
+      document.getElementById(id).addEventListener('change', function () {
+        var key = { fPeriode: 'periode', fStatus: 'status', fAging: 'aging', fPic: 'pic' }[id];
+        state[key] = this.value; state.page = 1; reload();
+      });
+    });
+    document.getElementById('fSearch').addEventListener('input', App.debounce(function () { state.search = this.value; state.page = 1; reload(); }, 400));
+    document.getElementById('btnReset').addEventListener('click', function () {
+      state = { periode: 'ALL', status: 'ALL', aging: 'ALL', pic: 'ALL', search: '', page: 1 };
+      ['fPeriode', 'fStatus', 'fAging', 'fPic'].forEach(function (id) { document.getElementById(id).value = 'ALL'; });
+      document.getElementById('fSearch').value = '';
+      reload();
+    });
+
+    App.setupExport('invoice', currentFilters);
+    App.setupPolling(reload);
+  </script>
+</body>
+</html>

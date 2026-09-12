@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <?!= include('Style'); ?>
+</head>
+<body>
+  <button class="mobile-menu" aria-label="Buka menu">&#9776;</button>
+  <div class="app-shell">
+    <?!= include('Sidebar', {activePage: 'mutasi', scriptUrl: scriptUrl}); ?>
+    <main class="main-area">
+      <?!= include('Topbar', {
+        title: 'RIWAYAT MUTASI PEMASUKAN',
+        subtitle: 'Rekap transaksi masuk seluruh rekening',
+        eyebrow: 'MUTASI BANK',
+        sectionTitle: 'Riwayat mutasi pemasukan',
+        note: 'Gunakan filter tanggal, rekening, PT, dan status alokasi.',
+        showActions: true
+      }); ?>
+
+      <div class="stats-grid four" id="kpiRow"></div>
+
+      <section class="panel filter-panel">
+        <div class="filters">
+          <label class="field"><span>Dari tanggal</span><input type="date" id="fStart"></label>
+          <label class="field"><span>Sampai tanggal</span><input type="date" id="fEnd"></label>
+          <label class="field"><span>Akun Bank</span><select id="fBank"><option value="ALL">Semua Akun Bank</option></select></label>
+          <label class="field"><span>Perusahaan</span><select id="fCompany"><option value="ALL">Semua PT</option></select></label>
+          <label class="field"><span>Status Alokasi</span>
+            <select id="fStatus">
+              <option value="ALL">Semua Status</option>
+              <option value="ALLOCATED">Sudah Dialokasikan</option>
+              <option value="WAITING">Belum Teralokasi</option>
+            </select>
+          </label>
+          <label class="field search-field"><span>Pencarian</span><input type="text" id="fSearch" placeholder="Uraian atau lokasi..."></label>
+          <button class="btn reset" id="btnReset">&#8635; Reset</button>
+        </div>
+      </section>
+
+      <section class="panel table-panel">
+        <div class="panel-head"><h2>DATA MUTASI MASUK</h2><span class="result-count" id="countLabel">0 transaksi</span></div>
+        <div class="table-scroll">
+          <table class="data-table">
+            <thead><tr><th>No</th><th>Perusahaan</th><th>Sumber Akun</th><th>Tanggal Mutasi</th><th>Uraian / Keterangan</th><th>Nominal Masuk</th><th>Status Alokasi</th></tr></thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+        <div id="emptyState"></div>
+        <div class="pager" id="pager"></div>
+      </section>
+    </main>
+  </div>
+
+  <?!= include('ClientScript'); ?>
+  <script>
+    var today = new Date();
+    var state = {
+      startDate: new Date(today.getFullYear(), 0, 1).toISOString().slice(0, 10),
+      endDate: today.toISOString().slice(0, 10),
+      bank: 'ALL', company: 'ALL', status: 'ALL', search: '', page: 1,
+    };
+    var optionsLoaded = false;
+
+    document.getElementById('fStart').value = state.startDate;
+    document.getElementById('fEnd').value = state.endDate;
+
+    function currentFilters() {
+      return { startDate: state.startDate, endDate: state.endDate, bank: state.bank, company: state.company, status: state.status, search: state.search, page: state.page };
+    }
+
+    function fillOptions(opts) {
+      if (optionsLoaded) return;
+      optionsLoaded = true;
+      var bankSel = document.getElementById('fBank');
+      opts.bank.forEach(function (b) { bankSel.innerHTML += '<option value="' + App.esc(b) + '">' + App.esc(b) + '</option>'; });
+      var coSel = document.getElementById('fCompany');
+      opts.company.forEach(function (c) { coSel.innerHTML += '<option value="' + App.esc(c) + '">' + App.esc(c) + '</option>'; });
+    }
+
+    function render(d) {
+      fillOptions(d.filterOptions);
+      var k = d.kpi;
+      document.getElementById('kpiRow').innerHTML = [
+        kpiCard({ cls: 'violet', txt: '&Sigma;' }, 'TOTAL FILTER DATA', App.fmtRupiah(k.totalFilterData), k.totalFilterCount + ' transaksi'),
+        kpiCard({ cls: 'green', txt: '&#9632;' }, 'PEMASUKAN HARI INI', App.fmtRupiah(k.pemasukanHariIni), today.toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })),
+        kpiCard({ cls: 'purple', txt: '&#9633;' }, 'PEMASUKAN BULAN INI', App.fmtRupiah(k.pemasukanBulanIni), today.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }).toUpperCase()),
+        kpiCard({ cls: 'yellow', txt: '!' }, 'TRANSAKSI MENUNGGU', k.transaksiMenunggu + ' Transaksi', 'Belum teralokasi'),
+      ].join('');
+
+      document.getElementById('countLabel').textContent = d.table.total + ' transaksi';
+      var rows = d.table.rows.map(function (r) {
+        var badge = r.teralokasi
+          ? '<span class="allocation-pill">' + App.esc(r.lokasi) + '</span>'
+          : '<span class="allocation-pill waiting">BELUM TERALOKASI</span>';
+        return '<tr><td>' + r.no + '</td><td>' + App.esc(r.perusahaan) + '</td><td>' + App.esc(r.sumberAkun) + '</td>' +
+          '<td>' + r.tanggal + '</td><td>' + App.esc(r.uraian) + '</td>' +
+          '<td class="balance-amount">' + App.fmtRupiah(r.nominal) + '</td><td>' + badge + '</td></tr>';
+      }).join('');
+      document.getElementById('tbody').innerHTML = rows;
+      document.getElementById('emptyState').innerHTML = d.table.total === 0
+        ? '<div class="empty-state">Tidak ada mutasi yang sesuai filter.</div>' : '';
+      renderPager(d.table);
+    }
+
+    function kpiCard(icon, label, value, small) {
+      return '<article class="stat-card"><div class="stat-icon ' + icon.cls + '">' + icon.txt + '</div>' +
+        '<div><span>' + App.esc(label) + '</span><strong>' + value + '</strong><small>' + App.esc(small) + '</small></div></article>';
+    }
+
+    function renderPager(t) {
+      document.getElementById('pager').innerHTML =
+        '<button ' + (t.page <= 1 ? 'disabled' : '') + ' onclick="changePage(' + (t.page - 1) + ')">&lsaquo;</button>' +
+        '<span>Halaman ' + t.page + ' dari ' + t.totalPages + '</span>' +
+        '<button ' + (t.page >= t.totalPages ? 'disabled' : '') + ' onclick="changePage(' + (t.page + 1) + ')">&rsaquo;</button>';
+    }
+    function changePage(p) { state.page = p; reload(); }
+
+    function reload() {
+      return App.call('apiGetMutasi', currentFilters()).then(render);
+    }
+
+    ['fBank', 'fCompany', 'fStatus'].forEach(function (id) {
+      document.getElementById(id).addEventListener('change', function () {
+        state[id.replace('f', '').toLowerCase()] = this.value; state.page = 1; reload();
+      });
+    });
+    document.getElementById('fStart').addEventListener('change', function () { state.startDate = this.value; state.page = 1; reload(); });
+    document.getElementById('fEnd').addEventListener('change', function () { state.endDate = this.value; state.page = 1; reload(); });
+    document.getElementById('fSearch').addEventListener('input', App.debounce(function () { state.search = this.value; state.page = 1; reload(); }, 400));
+    document.getElementById('btnReset').addEventListener('click', function () {
+      state = { startDate: new Date(today.getFullYear(), 0, 1).toISOString().slice(0, 10), endDate: today.toISOString().slice(0, 10), bank: 'ALL', company: 'ALL', status: 'ALL', search: '', page: 1 };
+      document.getElementById('fStart').value = state.startDate;
+      document.getElementById('fEnd').value = state.endDate;
+      document.getElementById('fBank').value = 'ALL';
+      document.getElementById('fCompany').value = 'ALL';
+      document.getElementById('fStatus').value = 'ALL';
+      document.getElementById('fSearch').value = '';
+      reload();
+    });
+
+    App.setupExport('mutasi', currentFilters);
+    App.setupPolling(reload);
+  </script>
+</body>
+</html>

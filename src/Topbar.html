@@ -1,0 +1,32 @@
+<header class="topbar">
+  <div>
+    <h1><?= title ?></h1>
+    <p><?= subtitle ?></p>
+  </div>
+  <div class="top-meta">
+    <strong id="todayLabel">&nbsp;</strong>
+    <button class="sync-status" id="syncBtn" title="Perbarui data sekarang" onclick="window.__refreshNow && window.__refreshNow()">
+      <span class="live-dot" id="syncDot"></span><span id="syncLabel">Memuat data&hellip;</span>
+    </button>
+  </div>
+</header>
+<div class="page-intro">
+  <div>
+    <span class="eyebrow"><?= eyebrow ?></span>
+    <h2><?= sectionTitle ?></h2>
+    <p><?= note ?></p>
+  </div>
+  <? if (showActions) { ?>
+  <div class="actions">
+    <button class="btn danger" onclick="window.__exportPdf && window.__exportPdf()">&#128190; Unduh PDF</button>
+    <button class="btn success" onclick="window.__exportCsv && window.__exportCsv()">&#8595; Ekspor CSV</button>
+  </div>
+  <? } ?>
+</div>
+<script>
+  (function () {
+    var d = new Date();
+    var opts = { day: '2-digit', month: 'long', year: 'numeric' };
+    document.getElementById('todayLabel').textContent = d.toLocaleDateString('id-ID', opts);
+  })();
+</script>

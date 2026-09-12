@@ -1,0 +1,21 @@
+<aside class="sidebar" id="sidebar">
+  <div class="brand">
+    <span class="brand-mark"><img src="https://www.gstatic.com/images/branding/product/1x/sheets_2020q4_48dp.png" alt="Logo PT Ray Mitra Perkasa"></span>
+    <div><strong>PT RAY MITRA PERKASA</strong><small>KEUANGAN</small></div>
+  </div>
+  <nav>
+    <a class="<?= activePage === 'dashboard' ? 'active' : '' ?>" href="<?= scriptUrl ?>"><span>&#9670;</span>Dashboard</a>
+    <a class="<?= activePage === 'tagihan' ? 'active' : '' ?>" href="<?= scriptUrl ?>?page=tagihan"><span>&#9635;</span>Tagihan</a>
+    <a class="<?= activePage === 'mutasi' ? 'active' : '' ?>" href="<?= scriptUrl ?>?page=mutasi"><span>&#8644;</span>Mutasi</a>
+    <a class="<?= activePage === 'invoice' ? 'active' : '' ?>" href="<?= scriptUrl ?>?page=invoice"><span>&#9776;</span>Invoice</a>
+    <a class="<?= activePage === 'penggajian' ? 'active' : '' ?>" href="<?= scriptUrl ?>?page=penggajian"><span>Rp</span>Penggajian</a>
+  </nav>
+  <div class="sidebar-foot"><span class="live-dot"></span> Data internal &middot; Private</div>
+</aside>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var btn = document.querySelector('.mobile-menu');
+    var sb = document.getElementById('sidebar');
+    if (btn && sb) btn.addEventListener('click', function () { sb.classList.toggle('open'); });
+  });
+</script>

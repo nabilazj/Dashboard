@@ -1,0 +1,126 @@
+<script>
+  /**
+   * Runtime kecil yang dipakai bareng oleh semua halaman (Page_*.html).
+   * Semua komunikasi ke server lewat google.script.run (bukan fetch),
+   * karena ini pola resmi & paling stabil untuk Apps Script HtmlService.
+   */
+  var App = (function () {
+    function fmtRupiah(n) {
+      n = Math.round(Number(n) || 0);
+      var neg = n < 0; n = Math.abs(n);
+      var s = String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+      return (neg ? '-Rp ' : 'Rp ') + s;
+    }
+    function fmtAngka(n) {
+      n = Math.round(Number(n) || 0);
+      return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    }
+    function esc(s) {
+      return String(s === null || s === undefined ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+    function debounce(fn, wait) {
+      var t;
+      return function () {
+        var args = arguments, ctx = this;
+        clearTimeout(t);
+        t = setTimeout(function () { fn.apply(ctx, args); }, wait || 350);
+      };
+    }
+    function call(fnName, args) {
+      return new Promise(function (resolve, reject) {
+        google.script.run
+          .withSuccessHandler(resolve)
+          .withFailureHandler(function (err) { reject(err); })
+          [fnName](args);
+      });
+    }
+
+    function downloadBlob(filename, blob) {
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+    }
+    function downloadText(filename, text, mime) {
+      downloadBlob(filename, new Blob([text], { type: mime || 'text/csv;charset=utf-8;' }));
+    }
+    function downloadBase64(filename, base64, mime) {
+      var bin = atob(base64);
+      var bytes = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      downloadBlob(filename, new Blob([bytes], { type: mime || 'application/pdf' }));
+    }
+
+    /** Pasang tombol Ekspor CSV/PDF di topbar untuk halaman `pageName`, dgn filter dari getFilters(). */
+    function setupExport(pageName, getFilters) {
+      window.__exportCsv = function () {
+        setSyncLabel_('Menyiapkan CSV&hellip;');
+        google.script.run
+          .withSuccessHandler(function (res) {
+            downloadText(res.filename, res.csv);
+            setSyncLabel_('CSV terunduh');
+          })
+          .withFailureHandler(function (err) { alert('Gagal ekspor CSV: ' + err.message); setSyncLabel_('Gagal ekspor'); })
+          .apiExportCsv(pageName, getFilters());
+      };
+      window.__exportPdf = function () {
+        setSyncLabel_('Menyiapkan PDF&hellip; (bisa beberapa detik)');
+        google.script.run
+          .withSuccessHandler(function (res) {
+            downloadBase64(res.filename, res.base64, 'application/pdf');
+            setSyncLabel_('PDF terunduh');
+          })
+          .withFailureHandler(function (err) { alert('Gagal ekspor PDF: ' + err.message); setSyncLabel_('Gagal ekspor'); })
+          .apiExportPdf(pageName, getFilters());
+      };
+    }
+
+    function setSyncLabel_(html) {
+      var el = document.getElementById('syncLabel');
+      if (el) el.innerHTML = html;
+    }
+    function setSyncDot_(ok) {
+      var el = document.getElementById('syncDot');
+      if (el) el.className = ok ? 'live-dot' : 'fallback-dot';
+    }
+
+    /**
+     * Jalankan loadFn() sekarang, lalu ulangi tiap 60 detik (meniru perilaku
+     * polling versi asli), plus saat tab kembali aktif. loadFn HARUS
+     * mengembalikan Promise.
+     */
+    function setupPolling(loadFn) {
+      var running = false;
+      function run() {
+        if (running) return;
+        running = true;
+        loadFn()
+          .then(function () {
+            setSyncDot_(true);
+            setSyncLabel_('MASTER DATA &middot; ' + new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }));
+          })
+          .catch(function (err) {
+            setSyncDot_(false);
+            setSyncLabel_('Gagal memuat data');
+            console.error(err);
+          })
+          .then(function () { running = false; });
+      }
+      window.__refreshNow = run;
+      run();
+      setInterval(run, 60000);
+      document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible') run();
+      });
+    }
+
+    return {
+      fmtRupiah: fmtRupiah, fmtAngka: fmtAngka, esc: esc, debounce: debounce,
+      call: call, downloadText: downloadText, downloadBase64: downloadBase64,
+      setupExport: setupExport, setupPolling: setupPolling,
+    };
+  })();
+</script>

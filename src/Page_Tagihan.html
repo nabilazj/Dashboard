@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <?!= include('Style'); ?>
+</head>
+<body>
+  <button class="mobile-menu" aria-label="Buka menu">&#9776;</button>
+  <div class="app-shell">
+    <?!= include('Sidebar', {activePage: 'tagihan', scriptUrl: scriptUrl}); ?>
+    <main class="main-area">
+      <?!= include('Topbar', {
+        title: 'REKAP TAGIHAN CLIENT',
+        subtitle: 'Pemantauan tagihan sampai bulan berjalan',
+        eyebrow: 'DATA TAGIHAN',
+        sectionTitle: 'Rekap per lokasi & periode',
+        note: 'Bulan setelah bulan berjalan otomatis disembunyikan sampai periodenya tiba.',
+        showActions: true
+      }); ?>
+
+      <div class="stats-grid four" id="kpiRow"></div>
+
+      <section class="panel filter-panel">
+        <div class="period-tabs" id="periodTabs">
+          <button data-mode="TAHUN_BERJALAN" class="active">Tahun Berjalan</button>
+          <button data-mode="SATU_BULAN">Satu Bulan</button>
+          <button data-mode="RENTANG_BULAN">Rentang Bulan</button>
+          <button data-mode="3_BULAN">3 Bulan</button>
+          <button data-mode="6_BULAN">6 Bulan</button>
+        </div>
+        <div class="filters" id="extraPeriodFilters"></div>
+        <div class="filters" style="margin-top:10px">
+          <label class="field"><span>Tahun</span><select id="fTahun"></select></label>
+          <label class="field"><span>Bank</span><select id="fBank"><option value="ALL">Semua Bank</option></select></label>
+          <label class="field"><span>Status</span><select id="fStatus"><option value="ALL">Semua Status</option><option>LUNAS</option><option>BELUM BAYAR</option></select></label>
+          <label class="field"><span>PIC Admin</span><select id="fPic"><option value="ALL">Semua PIC</option></select></label>
+          <label class="field search-field"><span>Pencarian</span><input type="text" id="fSearch" placeholder="Lokasi, PIC, komoditas..."></label>
+          <button class="btn reset" id="btnReset">&#8635; Reset</button>
+        </div>
+      </section>
+
+      <section class="panel top-aging-panel">
+        <div class="panel-head"><h2>TOP 10 CLIENT DENGAN TAGIHAN TERLAMA</h2><span class="result-count" id="top10Count">10 dari 0 client</span></div>
+        <div id="top10Wrap"></div>
+      </section>
+
+      <section class="panel table-panel">
+        <div class="panel-head"><h2 id="matrixTitle">DATA TAGIHAN</h2><span class="result-count" id="countLabel">0 lokasi</span></div>
+        <div class="table-scroll"><table class="data-table matrix"><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
+        <div id="emptyState"></div>
+        <div class="pager" id="pager"></div>
+      </section>
+    </main>
+  </div>
+
+  <?!= include('ClientScript'); ?>
+  <script>
+    var thisYear = new Date().getFullYear();
+    var MONTHS = ['JANUARI','FEBRUARI','MARET','APRIL','MEI','JUNI','JULI','AGUSTUS','SEPTEMBER','OKTOBER','NOVEMBER','DESEMBER'];
+    var state = { periodMode: 'TAHUN_BERJALAN', bulan: MONTHS[0], bulanAwal: MONTHS[0], bulanAkhir: MONTHS[0],
+      tahun: thisYear, bank: 'ALL', status: 'ALL', picAdmin: 'ALL', search: '', page: 1 };
+    var optionsLoaded = false;
+
+    function currentFilters() {
+      return { periodMode: state.periodMode, bulan: state.bulan, bulanAwal: state.bulanAwal, bulanAkhir: state.bulanAkhir,
+        tahun: state.tahun, bank: state.bank, status: state.status, picAdmin: state.picAdmin, search: state.search, page: state.page };
+    }
+
+    function renderExtraPeriodFilters() {
+      var el = document.getElementById('extraPeriodFilters');
+      if (state.periodMode === 'SATU_BULAN') {
+        el.innerHTML = '<label class="field"><span>Bulan</span><select id="fBulan">' +
+          MONTHS.map(function (m) { return '<option ' + (m === state.bulan ? 'selected' : '') + '>' + m + '</option>'; }).join('') + '</select></label>';
+        document.getElementById('fBulan').addEventListener('change', function () { state.bulan = this.value; state.page = 1; reload(); });
+      } else if (state.periodMode === 'RENTANG_BULAN') {
+        el.innerHTML = '<label class="field"><span>Dari Bulan</span><select id="fBulanAwal">' +
+          MONTHS.map(function (m) { return '<option ' + (m === state.bulanAwal ? 'selected' : '') + '>' + m + '</option>'; }).join('') + '</select></label>' +
+          '<label class="field"><span>Sampai Bulan</span><select id="fBulanAkhir">' +
+          MONTHS.map(function (m) { return '<option ' + (m === state.bulanAkhir ? 'selected' : '') + '>' + m + '</option>'; }).join('') + '</select></label>';
+        document.getElementById('fBulanAwal').addEventListener('change', function () { state.bulanAwal = this.value; state.page = 1; reload(); });
+        document.getElementById('fBulanAkhir').addEventListener('change', function () { state.bulanAkhir = this.value; state.page = 1; reload(); });
+      } else {
+        el.innerHTML = '';
+      }
+    }
+
+    document.querySelectorAll('#periodTabs button').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        document.querySelectorAll('#periodTabs button').forEach(function (b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        state.periodMode = btn.dataset.mode; state.page = 1;
+        renderExtraPeriodFilters();
+        reload();
+      });
+    });
+
+    function fillOptions(opts) {
+      if (optionsLoaded) return;
+      optionsLoaded = true;
+      var tahunSel = document.getElementById('fTahun');
+      (opts.tahun.length ? opts.tahun : [String(thisYear)]).forEach(function (y) {
+        tahunSel.innerHTML += '<option ' + (Number(y) === state.tahun ? 'selected' : '') + '>' + y + '</option>';
+      });
+      var bankSel = document.getElementById('fBank');
+      opts.bank.forEach(function (b) { bankSel.innerHTML += '<option>' + App.esc(b) + '</option>'; });
+      var picSel = document.getElementById('fPic');
+      opts.picAdmin.forEach(function (p) { picSel.innerHTML += '<option>' + App.esc(p) + '</option>'; });
+    }
+
+    function kpiCard(icon, label, value, small) {
+      return '<article class="stat-card"><div class="stat-icon ' + icon.cls + '">' + icon.txt + '</div>' +
+        '<div><span>' + App.esc(label) + '</span><strong>' + value + '</strong><small>' + App.esc(small) + '</small></div></article>';
+    }
+
+    function renderTop10(d) {
+      document.getElementById('top10Count').textContent = '10 dari ' + d.top10Total + ' client';
+      if (!d.top10.length) {
+        document.getElementById('top10Wrap').innerHTML = '<div class="empty-state success-empty">Belum ada client dengan tagihan belum bayar.</div>';
+        return;
+      }
+      var rows = d.top10.map(function (c, i) {
+        var badgeCls = (c.terlambatHari || 0) > 90 ? 'critical' : '';
+        return '<tr><td>' + (i + 1) + '</td>' +
+          '<td>' + App.esc(c.client) + '<small style="display:block;color:var(--muted);font-size:10.5px;">PIC: ' + App.esc(c.pic) + '</small></td>' +
+          '<td><strong>' + c.jumlahBulanBelumBayar + ' bulan</strong><br><small style="color:var(--muted)">' + App.esc(c.daftarBulan) + '</small></td>' +
+          '<td>' + c.jumlahTagihan + ' Tagihan</td>' +
+          '<td><span class="aging-badge ' + badgeCls + '">' + (c.terlambatHari === null ? '-' : c.terlambatHari + ' hari') + '</span>' +
+          '<small>Due date: ' + App.esc(c.jatuhTempo) + '</small></td>' +
+          '<td><strong>' + App.fmtRupiah(c.totalSisaPiutang) + '</strong></td></tr>';
+      }).join('');
+      document.getElementById('top10Wrap').innerHTML =
+        '<div class="table-scroll"><table class="data-table"><thead><tr><th>No</th><th>Client</th><th>Bulan Belum Bayar</th>' +
+        '<th>Jumlah Tagihan</th><th>Jatuh Tempo &amp; Terlambat</th><th>Total Sisa Piutang</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+    }
+
+    function render(d) {
+      fillOptions(d.filterOptions);
+      var k = d.kpi;
+      document.getElementById('kpiRow').innerHTML = [
+        kpiCard({ cls: 'purple', txt: 'Rp' }, 'TOTAL PIUTANG CLIENT', App.fmtRupiah(k.totalPiutangClient), 'Keseluruhan client sampai bulan berjalan'),
+        kpiCard({ cls: 'red', txt: '&#8987;' }, 'CLIENT TERLAMBAT', k.clientTerlambatCount + ' Client', k.clientTerlambatTagihanCount + ' tagihan belum bayar dari data TAGIHAN'),
+        kpiCard({ cls: 'green', txt: '&check;' }, 'TERBAYAR', App.fmtRupiah(k.terbayar), 'Pembayaran tercatat'),
+        kpiCard({ cls: 'cyan', txt: '&#8962;' }, 'LOKASI', k.lokasiCount + ' Client', d.kolomBulan.join(' &middot; ')),
+      ].join('');
+
+      renderTop10(d);
+
+      document.getElementById('matrixTitle').textContent = 'DATA TAGIHAN · ' + d.kolomBulan.join(' – ');
+      document.getElementById('thead').innerHTML = '<tr><th>No</th><th>Nama Lokasi</th><th>Bank</th><th>PIC Admin</th>' +
+        d.kolomBulan.map(function (m) { return '<th>' + m + '</th>'; }).join('') + '<th>Total Periode</th></tr>';
+      document.getElementById('countLabel').textContent = d.table.total + ' lokasi';
+
+      var rows = d.table.rows.map(function (r, i) {
+        var no = (d.table.page - 1) * 25 + i + 1;
+        var cells = r.cells.map(function (c) {
+          if (!c) return '<td><span class="month-pill dash">&mdash;</span></td>';
+          var cls = c.status === 'LUNAS' ? 'month-pill' : 'month-pill dash';
+          return '<td><span class="' + cls + '">' + App.esc(c.status) + '</span></td>';
+        }).join('');
+        return '<tr><td>' + no + '</td><td class="location">' + App.esc(r.lokasi) + '</td><td>' + App.esc(r.bank) + '</td>' +
+          '<td>' + App.esc(r.picAdmin) + '</td>' + cells + '<td class="total-cell">' + App.fmtRupiah(r.totalPeriode) + '</td></tr>';
+      }).join('');
+      document.getElementById('tbody').innerHTML = rows;
+      document.getElementById('emptyState').innerHTML = d.table.total === 0 ? '<div class="empty-state">Tidak ada tagihan yang sesuai filter.</div>' : '';
+      renderPager(d.table);
+    }
+
+    function renderPager(t) {
+      document.getElementById('pager').innerHTML =
+        '<button ' + (t.page <= 1 ? 'disabled' : '') + ' onclick="changePage(' + (t.page - 1) + ')">&lsaquo;</button>' +
+        '<span>Halaman ' + t.page + ' dari ' + t.totalPages + '</span>' +
+        '<button ' + (t.page >= t.totalPages ? 'disabled' : '') + ' onclick="changePage(' + (t.page + 1) + ')">&rsaquo;</button>';
+    }
+    function changePage(p) { state.page = p; reload(); }
+
+    function reload() { return App.call('apiGetTagihan', currentFilters()).then(render); }
+
+    ['fTahun', 'fBank', 'fStatus', 'fPic'].forEach(function (id) {
+      document.getElementById(id).addEventListener('change', function () {
+        var key = { fTahun: 'tahun', fBank: 'bank', fStatus: 'status', fPic: 'picAdmin' }[id];
+        state[key] = id === 'fTahun' ? Number(this.value) : this.value;
+        state.page = 1; reload();
+      });
+    });
+    document.getElementById('fSearch').addEventListener('input', App.debounce(function () { state.search = this.value; state.page = 1; reload(); }, 400));
+    document.getElementById('btnReset').addEventListener('click', function () {
+      state = { periodMode: 'TAHUN_BERJALAN', bulan: MONTHS[0], bulanAwal: MONTHS[0], bulanAkhir: MONTHS[0], tahun: thisYear, bank: 'ALL', status: 'ALL', picAdmin: 'ALL', search: '', page: 1 };
+      document.querySelectorAll('#periodTabs button').forEach(function (b) { b.classList.toggle('active', b.dataset.mode === 'TAHUN_BERJALAN'); });
+      renderExtraPeriodFilters();
+      document.getElementById('fBank').value = 'ALL'; document.getElementById('fStatus').value = 'ALL';
+      document.getElementById('fPic').value = 'ALL'; document.getElementById('fSearch').value = '';
+      reload();
+    });
+
+    App.setupExport('tagihan', currentFilters);
+    App.setupPolling(reload);
+  </script>
+</body>
+</html>
