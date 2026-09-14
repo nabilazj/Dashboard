@@ -73,6 +73,9 @@ function toDate_(v) {
   if (!s || s === '-' || s === '0') return null;
   var m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
   if (m) return stripTime_(new Date(+m[3], +m[2] - 1, +m[1]));
+  // Format ISO "yyyy-mm-dd" (mis. dari <input type="date"> di halaman Penggajian)
+  var mIso = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (mIso) return stripTime_(new Date(+mIso[1], +mIso[2] - 1, +mIso[3]));
   // Format "20 Agu 2026" / "20 Agustus 2026" (nama bulan Indonesia, dengan/tanpa titik)
   var m2 = s.match(/^(\d{1,2})\s+([A-Za-z]+)\.?\s+(\d{4})$/);
   if (m2) {

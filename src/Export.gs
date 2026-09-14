@@ -68,10 +68,11 @@ function buildCsvForPage_(pageName, f) {
   if (pageName === 'penggajian_riwayat') {
     var rekap = loadRekapPenggajian_();
     var today2 = all.today;
-    var periodeIdx = f.periodeIdx !== undefined && f.periodeIdx !== '' ? toNumber_(f.periodeIdx) : today2.getMonth();
-    var bulanTerpilih = CONFIG.MONTHS[periodeIdx];
-    var bulanSebelumnyaName = periodeIdx > 0 ? CONFIG.MONTHS[periodeIdx - 1] : null;
-    var riwayat = buildRiwayat_(rekap, bulanTerpilih, bulanSebelumnyaName, f.searchHistory);
+    var isAllPeriode5 = f.periodeIdx === 'ALL';
+    var periodeIdx = isAllPeriode5 ? 'ALL' : (f.periodeIdx !== undefined && f.periodeIdx !== '' ? toNumber_(f.periodeIdx) : today2.getMonth());
+    var riwayat = isAllPeriode5
+      ? buildRiwayatAll_(rekap, f.searchHistory, today2.getMonth())
+      : buildRiwayat_(rekap, CONFIG.MONTHS[periodeIdx], periodeIdx > 0 ? CONFIG.MONTHS[periodeIdx - 1] : null, f.searchHistory);
     var header5 = ['No', 'Client', 'Periode', 'Nominal', 'Bulan Sebelumnya', 'Perubahan (%)', 'Status Data'];
     var body5 = riwayat.map(function (r, i) {
       return [i + 1, r.client, r.periode, Math.round(r.nominal), r.bulanSebelumnya === null ? '-' : Math.round(r.bulanSebelumnya),

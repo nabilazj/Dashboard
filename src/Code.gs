@@ -87,41 +87,6 @@ function apiGetPenggajian(filters) {
   return getPenggajianData_(all, rekap, payroll, filters);
 }
 
-/**
- * Diagnostik SEMENTARA: baca LANGSUNG dari Spreadsheet (lewati cache DAN
- * lewati semua logika parsing di DataLayer.gs), supaya kita bisa lihat
- * PERSIS apa yang benar-benar ada di sheet — termasuk TIPE data tiap sel
- * (Date asli vs teks), yang tidak kelihatan dari tampilan biasa.
- */
-function apiDebugPayrollRaw() {
-  function describeCell_(c) {
-    if (c instanceof Date) return 'DATE(' + c.toISOString() + ')';
-    if (typeof c === 'number') return 'NUMBER(' + c + ')';
-    if (c === '' || c === null || c === undefined) return '<kosong>';
-    return 'TEXT("' + String(c) + '")';
-  }
-  function previewSheet_(ss, name, maxRow, maxCol) {
-    var sh = findSheetCI_(ss, name);
-    if (!sh) return { found: false, realName: null, preview: [] };
-    var lastRow = sh.getLastRow(), lastCol = sh.getLastColumn();
-    var r = Math.min(lastRow, maxRow), c = Math.min(lastCol, maxCol);
-    var preview = [];
-    if (r >= 1 && c >= 1) {
-      var vals = sh.getRange(1, 1, r, c).getValues();
-      preview = vals.map(function (row) { return row.map(describeCell_).join('  |  '); });
-    }
-    return { found: true, realName: sh.getName(), lastRow: lastRow, lastCol: lastCol, preview: preview };
-  }
-
-  var ss = SpreadsheetApp.openById(CONFIG.PAYROLL_ID);
-  var todayMonthName = CONFIG.MONTHS[todayJakarta_().getMonth()];
-  return {
-    tabDiperiksa: todayMonthName,
-    tabBulanIni: previewSheet_(ss, todayMonthName, 12, 7),
-    tabRekap: previewSheet_(ss, CONFIG.SHEET_REKAP, 5, 6),
-  };
-}
-
 /* ================================ EXPORT CSV & PDF =================================== */
 /* Lihat Export.gs untuk implementasi detail. */
 

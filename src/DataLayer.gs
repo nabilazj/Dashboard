@@ -307,6 +307,15 @@ function parsePayrollMonthSheet_(sheetName, forceRefresh) {
   i += 2; // lewati marker "JADWAL PENGGAJIAN" + header (NO,TANGGAL,NAMA CLIENT,REKAP,NOMINAL,BANK)
   while (i < rows.length) {
     var b = rows[i];
+    // Setelah blok JADWAL PENGGAJIAN, sheet bulan biasanya lanjut ke blok
+    // "PINDAH DANA" (mutasi antar rekening penggajian — SUMBER DANA, SALDO,
+    // KEBUTUHAN, dst, format kolom beda total). Itu BUKAN jadwal gaji client
+    // — kalau ikut kebaca di sini hasilnya baris sampah (tanggal 1970/1995/
+    // dst, "client" berupa angka saldo). Begitu ketemu marker ini, berhenti
+    // total dari sheet bulan ini (dicek di SELURUH kolom baris, bukan cuma
+    // kolom pertama, karena posisi persis "PINDAH DANA" bisa beda per sheet).
+    var isPindahDana = b.some(function (cell) { return safeUpper_(cell).indexOf('PINDAH DANA') !== -1; });
+    if (isPindahDana) break;
     var no = String(b[0] || '').trim();
     if (safeUpper_(no) !== 'TOTAL' && no !== '') {
       var tgl2 = toDate_(b[1]);
