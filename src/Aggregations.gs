@@ -286,8 +286,26 @@ function uniqueSorted_(arr) {
 /* ================================ TAGIHAN ================================= */
 
 function buildKolomBulan_(f, currentMonthIdx) {
-  var mode = f.periodMode || 'TAHUN_BERJALAN';
   var months = CONFIG.MONTHS;
+
+  // Filter "Bulan" di baris filter (dipakai jg utk cek Status per bulan
+  // tertentu) SEKARANG JUGA menentukan kolom yg tampil di matrix: Januari
+  // s.d. bulan yang dipilih — bukan cuma 1 kolom — supaya kelihatan progres
+  // pembayaran MENUJU bulan itu, bukan snapshot 1 bulan lepas dari konteks.
+  // Ini sengaja mengambil alih tab periode manapun yang sedang aktif (Tahun
+  // Berjalan/Satu Bulan/dst) karena memilih bulan spesifik di sini adalah
+  // sinyal yang lebih eksplisit.
+  if (f.bulanFilter && f.bulanFilter !== 'ALL') {
+    if (f.bulanFilter === 'THR') return months.slice(0, 3).concat(['THR']); // Jan–Feb–Mar–THR
+    var idxFilter = monthIndexOf_(f.bulanFilter);
+    if (idxFilter > -1) {
+      var kolomF = months.slice(0, idxFilter + 1);
+      kolomF.splice(3, 0, 'THR'); // tetap sisipkan THR setelah Maret, sama seperti mode default
+      return kolomF;
+    }
+  }
+
+  var mode = f.periodMode || 'TAHUN_BERJALAN';
   if (mode === 'SATU_BULAN' && f.bulan) return [f.bulan];
   if (mode === 'RENTANG_BULAN' && f.bulanAwal && f.bulanAkhir) {
     var i0 = monthIndexOf_(f.bulanAwal), i1 = monthIndexOf_(f.bulanAkhir);
