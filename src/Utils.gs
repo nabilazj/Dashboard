@@ -16,6 +16,22 @@ function toNumber_(v) {
   return isNaN(n) ? 0 : n;
 }
 
+/**
+ * Nama/singkatan bulan Indonesia -> index bulan (0=Januari). PENTING: JS
+ * Date parser bawaan cuma kenal singkatan Inggris (Jan/Feb/Mar/Apr/May/...),
+ * jadi tanggal teks seperti "20 Agu 2026" (dari sheet REKAP PENGGAJIAN,
+ * kolom TANGGAL yang diketik manual bukan cell format tanggal asli) akan
+ * SELALU gagal di-parse tanpa mapping ini — inilah yang bikin baris jadwal
+ * hilang total tanpa pesan error apapun.
+ */
+var ID_MONTHS_ = {
+  JAN: 0, JANUARI: 0, FEB: 1, FEBRUARI: 1, MAR: 2, MARET: 2, APR: 3, APRIL: 3,
+  MEI: 4, MAY: 4, JUN: 5, JUNI: 5, JUL: 6, JULI: 6,
+  AGU: 7, AGT: 7, AUG: 7, AGUSTUS: 7,
+  SEP: 8, SEPT: 8, SEPTEMBER: 8, OKT: 9, OCT: 9, OKTOBER: 9,
+  NOV: 10, NOVEMBER: 10, DES: 11, DEC: 11, DESEMBER: 11,
+};
+
 /** Ubah cell tanggal (Date object dari Sheets, serial Excel, atau string) jadi Date (jam 00:00). */
 function toDate_(v) {
   if (v === null || v === undefined || v === '') return null;
@@ -30,6 +46,12 @@ function toDate_(v) {
   if (!s || s === '-' || s === '0') return null;
   var m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
   if (m) return stripTime_(new Date(+m[3], +m[2] - 1, +m[1]));
+  // Format "20 Agu 2026" / "20 Agustus 2026" (nama bulan Indonesia, dengan/tanpa titik)
+  var m2 = s.match(/^(\d{1,2})\s+([A-Za-z]+)\.?\s+(\d{4})$/);
+  if (m2) {
+    var monIdx = ID_MONTHS_[m2[2].toUpperCase()];
+    if (monIdx !== undefined) return stripTime_(new Date(+m2[3], monIdx, +m2[1]));
+  }
   var d = new Date(s);
   if (!isNaN(d.getTime())) return stripTime_(d);
   return null;
