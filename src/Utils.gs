@@ -2,6 +2,33 @@
  * Utils.gs — helper murni (tidak menyentuh Spreadsheet), dipakai lintas file.
  */
 
+/**
+ * Buang baris kosong-total di AWAL dan kolom kosong-total di kiri (mis. ada
+ * kolom A / beberapa baris atas yang sengaja dikosongkan sebagai spasi
+ * visual di sheet REKAP PENGGAJIAN 2026 — getValues() ikut mengembalikan
+ * baris/kolom kosong itu apa adanya, beda dari ringkasan "human readable"
+ * yang otomatis memangkasnya). Tidak menyentuh baris/kolom kosong DI
+ * TENGAH data (itu bisa jadi section marker yang memang perlu, lihat
+ * DataLayer.gs). Aman dipanggil walau sheetnya memang sudah rapi dari
+ * kolom A / baris 1 — hasilnya tidak berubah.
+ */
+function compactGrid_(values) {
+  function isBlank(c) { return c === '' || c === null || c === undefined; }
+  var startRow = 0;
+  while (startRow < values.length && values[startRow].every(isBlank)) startRow++;
+  var trimmed = values.slice(startRow);
+  if (!trimmed.length) return [];
+
+  var minCol = trimmed[0].length;
+  trimmed.forEach(function (row) {
+    for (var c = 0; c < row.length; c++) {
+      if (!isBlank(row[c])) { if (c < minCol) minCol = c; break; }
+    }
+  });
+  if (minCol <= 0 || minCol >= trimmed[0].length) return trimmed;
+  return trimmed.map(function (row) { return row.slice(minCol); });
+}
+
 /** Ubah apapun (number, string format ID "1.234,56", kosong) jadi number aman. */
 function toNumber_(v) {
   if (v === null || v === undefined || v === '') return 0;

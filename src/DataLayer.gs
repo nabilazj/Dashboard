@@ -38,7 +38,7 @@ function readSheetRawUncached_(spreadsheetId, sheetName) {
   var lastRow = sheet.getLastRow();
   var lastCol = sheet.getLastColumn();
   if (lastRow < 1 || lastCol < 1) return { header: [], rows: [] };
-  var values = sheet.getRange(1, 1, lastRow, lastCol).getValues();
+  var values = compactGrid_(sheet.getRange(1, 1, lastRow, lastCol).getValues());
   var header = (values[0] || []).map(function (h) { return String(h || '').trim(); });
   var rows = values.slice(1).filter(function (r) {
     return r.some(function (c) { return c !== '' && c !== null; });
@@ -88,7 +88,7 @@ function readSheetAllRowsUncached_(spreadsheetId, sheetName) {
   var lastRow = sheet.getLastRow();
   var lastCol = sheet.getLastColumn();
   if (lastRow < 1 || lastCol < 1) return [];
-  return sheet.getRange(1, 1, lastRow, lastCol).getValues();
+  return compactGrid_(sheet.getRange(1, 1, lastRow, lastCol).getValues());
 }
 
 /**
