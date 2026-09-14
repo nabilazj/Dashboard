@@ -86,6 +86,8 @@
       <section class="panel" id="debugPanel" style="border:1px dashed #cbb; background:#fffdf5;">
         <div class="panel-head"><h2>INFO DIAGNOSTIK (SEMENTARA)</h2></div>
         <div id="debugWrap" style="font-size:11.5px;color:var(--muted);line-height:1.7;"></div>
+        <button class="btn reset" id="btnRawDebug" style="margin-top:10px">Tampilkan Data Mentah (Live, Lewati Cache)</button>
+        <div id="rawDebugWrap" style="font-size:11px;color:var(--ink);line-height:1.7;margin-top:10px;font-family:monospace;white-space:pre-wrap;word-break:break-all;"></div>
       </section>
 
       <section class="panel table-panel payroll-history-panel">
@@ -256,6 +258,27 @@
 
     App.setupExport('penggajian_jadwal', currentFilters);
     App.setupPolling(reload);
+
+    document.getElementById('btnRawDebug').addEventListener('click', function () {
+      var el = document.getElementById('rawDebugWrap');
+      el.textContent = 'Memuat data mentah langsung dari Spreadsheet...';
+      google.script.run
+        .withSuccessHandler(function (r) {
+          function fmtSheet(label, s) {
+            if (!s.found) return label + ': TAB TIDAK DITEMUKAN\n';
+            var out = label + ' -> nama tab asli: "' + s.realName + '", lastRow=' + s.lastRow + ', lastCol=' + s.lastCol + '\n';
+            s.preview.forEach(function (line, i) { out += '  baris ' + (i + 1) + ': ' + line + '\n'; });
+            if (!s.preview.length) out += '  (tidak ada baris untuk ditampilkan)\n';
+            return out;
+          }
+          el.textContent =
+            'Bulan yang diperiksa: ' + r.tabDiperiksa + '\n\n' +
+            fmtSheet('TAB BULAN INI', r.tabBulanIni) + '\n' +
+            fmtSheet('TAB REKAP', r.tabRekap);
+        })
+        .withFailureHandler(function (err) { el.textContent = 'GAGAL: ' + err.message; })
+        .apiDebugPayrollRaw();
+    });
   </script>
 </body>
 </html>
