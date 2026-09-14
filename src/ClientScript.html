@@ -149,7 +149,14 @@
           })
           .catch(function (err) {
             setSyncDot_(false);
-            setSyncLabel_('Gagal memuat data');
+            // Tampilkan PESAN ERROR ASLINYA (bukan cuma "Gagal memuat data"
+            // generik) — supaya kalau ada masalah (mis. izin/otorisasi belum
+            // di-approve setelah menambah fitur baru, kuota, dll), Anda bisa
+            // langsung lihat penyebabnya tanpa perlu buka Console (F12).
+            var msg = (err && err.message) ? String(err.message) : 'tidak diketahui';
+            setSyncLabel_('Gagal memuat data: ' + App.esc(msg));
+            var btn = document.getElementById('syncBtn');
+            if (btn) btn.title = 'Gagal memuat data — ' + msg + ' (klik utk coba lagi)';
             console.error(err);
           })
           .then(function () {
