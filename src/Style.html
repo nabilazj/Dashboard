@@ -321,15 +321,17 @@
   .theme-toggle:hover{background:var(--surface-hover);}
   .top-meta-row{display:flex;align-items:center;justify-content:flex-end;gap:8px;}
 
-  /* ---------- Overlay loading halaman pertama kali ---------- */
-  .page-loader{position:fixed;inset:0;background:var(--page);z-index:9999;
-    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
-    transition:opacity .25s ease;}
-  .page-loader.hide{opacity:0;pointer-events:none;}
-  .page-loader-spinner{width:36px;height:36px;border-radius:50%;border:3px solid var(--border);
-    border-top-color:var(--violet);animation:pageLoaderSpin .8s linear infinite;}
-  .page-loader span{font-size:12.5px;color:var(--muted);font-weight:600;}
-  @keyframes pageLoaderSpin{to{transform:rotate(360deg);}}
+  /* ---------- Indikator loading halaman pertama kali ----------
+     SENGAJA cuma bar tipis di paling atas, TIDAK menutupi apapun — supaya
+     sidebar, judul halaman, dan bentuk/kerangka dashboard tetap langsung
+     kelihatan sejak awal (bukan layar kosong menunggu), data yang belum
+     ada cuma tampil kosong sampai terisi. */
+  .page-loader{position:fixed;top:0;left:0;right:0;height:3px;z-index:9999;
+    background:var(--border);overflow:hidden;pointer-events:none;transition:opacity .25s ease;}
+  .page-loader.hide{opacity:0;}
+  .page-loader::before{content:'';position:absolute;top:0;bottom:0;width:35%;
+    background:var(--violet);border-radius:0 3px 3px 0;animation:pageLoaderSlide 1.1s ease-in-out infinite;}
+  @keyframes pageLoaderSlide{0%{left:-35%;}60%{left:100%;}100%{left:100%;}}
 </style>
 <script>
   // Terapkan tema TERSIMPAN (atau preferensi sistem kalau belum pernah

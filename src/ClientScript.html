@@ -110,13 +110,18 @@
       syncThemeToggleUI_();
     }
 
-    /** Overlay "Memuat data..." full-layar supaya loading pertama kali tidak terasa seperti layar kosong/macet. */
+    /**
+     * Indikator loading — bar tipis di paling atas layar (mirip loading bar
+     * YouTube/GitHub), BUKAN overlay yang menutupi seluruh halaman. Sidebar,
+     * judul, dan kerangka panel tetap langsung kelihatan sejak halaman
+     * dibuka; teks "Memuat data..." di sebelah tanggal (lihat setSyncLabel_)
+     * sudah cukup jadi keterangan tekstualnya.
+     */
     function ensureLoader_() {
       if (document.getElementById('pageLoader')) return;
       var el = document.createElement('div');
       el.id = 'pageLoader';
       el.className = 'page-loader';
-      el.innerHTML = '<div class="page-loader-spinner"></div><span>Memuat data&hellip;</span>';
       document.body.appendChild(el);
     }
     function hideLoader_() {
