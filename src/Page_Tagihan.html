@@ -158,7 +158,7 @@
 
       document.getElementById('matrixTitle').textContent = 'DATA TAGIHAN · ' + d.kolomBulan.join(' – ');
       document.getElementById('thead').innerHTML = '<tr><th>No</th><th>Nama Lokasi</th><th>Bank</th><th>PIC Admin</th>' +
-        d.kolomBulan.map(function (m) { return '<th>' + m + '</th>'; }).join('') + '<th>Total Periode</th></tr>';
+        d.kolomBulan.map(function (m) { return '<th>' + m + '</th>'; }).join('') + '<th>Total Belum Bayar</th></tr>';
       document.getElementById('countLabel').textContent = d.table.total + ' lokasi';
 
       var rows = d.table.rows.map(function (r, i) {

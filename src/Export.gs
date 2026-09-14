@@ -31,7 +31,7 @@ function buildCsvForPage_(pageName, f) {
 
   if (pageName === 'tagihan') {
     var built = buildTagihanRows_(all, f);
-    var header2 = ['No', 'Nama Lokasi', 'Bank', 'PIC Admin'].concat(built.kolomBulan, ['Total Periode']);
+    var header2 = ['No', 'Nama Lokasi', 'Bank', 'PIC Admin'].concat(built.kolomBulan, ['Total Belum Bayar']);
     var body2 = built.rows.map(function (r, i) {
       var cells = r.cells.map(function (c) { return c ? c.status : '-'; });
       return [i + 1, r.lokasi, r.bank, r.picAdmin].concat(cells, [Math.round(r.totalPeriode)]);

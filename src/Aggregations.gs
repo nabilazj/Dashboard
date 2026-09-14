@@ -370,7 +370,12 @@ function buildTagihanRows_(all, f) {
       var t = byPeriode[bulan];
       return t ? { status: t.STATUS, nilai: t.NILAI_TAGIHAN, sisa: t.SISA_PIUTANG } : null;
     });
-    var totalPeriode = sum_(cells.filter(function (c) { return c; }), function (c) { return c.nilai; });
+    // Kolom paling kanan matrix: TOTAL BELUM BAYAR — jumlah sisa piutang dari
+    // kolom bulan yang statusnya belum LUNAS saja (bukan total nilai semua
+    // tagihan di kolom yang tampil), supaya langsung kelihatan berapa yang
+    // masih harus ditagih dari lokasi ini. Pakai sisa||nilai persis sama
+    // seperti cara nominal ditampilkan di tiap sel bulan (lihat Page_Tagihan.html).
+    var totalPeriode = sum_(cells.filter(function (c) { return c && c.status !== 'LUNAS'; }), function (c) { return c.sisa || c.nilai; });
     return { lokasi: lokasi, bank: first.BANK, picAdmin: first.PIC_ADMIN, cells: cells, totalPeriode: totalPeriode };
   });
   rows.sort(function (a, b) { return a.lokasi.localeCompare(b.lokasi); });
