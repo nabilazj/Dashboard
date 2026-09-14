@@ -662,3 +662,136 @@ function getPenggajianData_(all, rekap, payroll, f) {
     bulanBerjalan: CONFIG.MONTHS[currentMonthIdx],
   };
 }
+
+/* =============================== LAPORAN HARIAN ============================== */
+/*
+ * Replikasi logika dari app "Dashboard Laporan Harian" (Reports.gs, fungsi
+ * api_getDashboardSummary/api_searchReports/api_exportReports di sana) —
+ * digabung jadi 1 halaman, TANPA sistem login/role/allowedSources-nya
+ * (dashboard ini sudah punya akses 1-pintu sendiri, lihat penjelasan yang
+ * sudah disampaikan ke user). Detail baris TIDAK butuh panggilan server
+ * terpisah — semua field yang dibutuhkan modal "Detail" sudah ikut terkirim
+ * bersama tiap baris tabel, jadi tombol Detail cukup baca data yang sudah
+ * ada di browser.
+ */
+
+/** Filter + urutkan (dipakai bareng oleh tabel & ekspor CSV — supaya hasilnya selalu identik). */
+function filterLaporanHarian_(rows, f) {
+  f = f || {};
+  var dateFrom = f.dateFrom ? toDate_(f.dateFrom) : null;
+  var dateTo = f.dateTo ? toDate_(f.dateTo) : null;
+  var sourceFilter = f.source && f.source !== 'ALL' ? safeUpper_(f.source) : null;
+  var search = (f.search || '').toLowerCase();
+  var noteStatus = f.noteStatus || 'ALL'; // ALL | WITH_NOTE | WITHOUT_NOTE
+
+  var filtered = rows.filter(function (r) {
+    if (dateFrom && (!r.TANGGAL || r.TANGGAL.getTime() < dateFrom.getTime())) return false;
+    if (dateTo && (!r.TANGGAL || r.TANGGAL.getTime() > dateTo.getTime())) return false;
+    if (sourceFilter && safeUpper_(r.SOURCE) !== sourceFilter) return false;
+    if (search) {
+      var hay = (r.KEGIATAN + ' ' + r.KETERANGAN).toLowerCase();
+      if (hay.indexOf(search) === -1) return false;
+    }
+    if (noteStatus === 'WITH_NOTE' && !r.KETERANGAN) return false;
+    if (noteStatus === 'WITHOUT_NOTE' && r.KETERANGAN) return false;
+    return true;
+  });
+
+  filtered.sort(function (a, b) {
+    var at = a.TANGGAL ? a.TANGGAL.getTime() : 0, bt = b.TANGGAL ? b.TANGGAL.getTime() : 0;
+    if (at !== bt) return bt - at; // tanggal laporan terbaru dulu
+    var aw = a.WAKTU_INPUT ? a.WAKTU_INPUT.getTime() : 0, bw = b.WAKTU_INPUT ? b.WAKTU_INPUT.getTime() : 0;
+    return bw - aw; // baru diinput dulu, sebagai tiebreak
+  });
+  return filtered;
+}
+
+function laporanRowToClient_(r) {
+  return {
+    tanggal: formatTanggal_(r.TANGGAL),
+    source: r.SOURCE,
+    kegiatan: r.KEGIATAN,
+    keterangan: r.KETERANGAN,
+    waktuInput: formatTanggalJam_(r.WAKTU_INPUT),
+  };
+}
+
+function getLaporanHarianData_(rows, f) {
+  f = f || {};
+  var today = todayJakarta_();
+  var yesterday = new Date(today.getTime() - 86400000);
+
+  // Jendela "hari ini + kemarin" — dasar KPI, kartu per sumber, & aktivitas terbaru.
+  var windowRows = rows.filter(function (r) {
+    return r.TANGGAL && (r.TANGGAL.getTime() === today.getTime() || r.TANGGAL.getTime() === yesterday.getTime());
+  });
+  var sourceSetWindow = {}, totalHariIni = 0, totalKemarin = 0, latestTanggal = null;
+  windowRows.forEach(function (r) {
+    if (r.SOURCE) sourceSetWindow[safeUpper_(r.SOURCE)] = true;
+    if (r.TANGGAL.getTime() === today.getTime()) totalHariIni++;
+    if (r.TANGGAL.getTime() === yesterday.getTime()) totalKemarin++;
+    if (!latestTanggal || r.TANGGAL.getTime() > latestTanggal.getTime()) latestTanggal = r.TANGGAL;
+  });
+
+  // Kartu "Laporan Hari Ini per Sumber/Orang" — semua sumber yang PERNAH
+  // tercatat dapat kartu (termasuk yang 0 hari ini), supaya kelihatan siapa
+  // yang belum lapor hari ini, bukan cuma yang sudah.
+  var knownSources = uniqueSorted_(rows.map(function (r) { return r.SOURCE; }).filter(function (s) { return s; }));
+  var MAX_ITEMS_PER_CARD = 30;
+  var bucket = {};
+  knownSources.forEach(function (s) { bucket[s] = { source: s, count: 0, items: [], truncated: false }; });
+  rows.forEach(function (r) {
+    if (!r.TANGGAL || r.TANGGAL.getTime() !== today.getTime()) return;
+    var key = r.SOURCE || '(Tanpa Nama Sumber)';
+    if (!bucket[key]) bucket[key] = { source: key, count: 0, items: [], truncated: false };
+    bucket[key].count++;
+    if (bucket[key].items.length < MAX_ITEMS_PER_CARD) bucket[key].items.push({ kegiatan: r.KEGIATAN, keterangan: r.KETERANGAN });
+    else bucket[key].truncated = true;
+  });
+  var bySourceToday = Object.keys(bucket).map(function (k) { return bucket[k]; });
+  bySourceToday.sort(function (a, b) {
+    if (b.count !== a.count) return b.count - a.count;
+    return a.source.localeCompare(b.source);
+  });
+
+  // Aktivitas terbaru — dari jendela hari ini+kemarin, terbaru dulu, maks 15.
+  var recentActivities = windowRows.slice()
+    .sort(function (a, b) {
+      var aw = a.WAKTU_INPUT ? a.WAKTU_INPUT.getTime() : (a.TANGGAL ? a.TANGGAL.getTime() : 0);
+      var bw = b.WAKTU_INPUT ? b.WAKTU_INPUT.getTime() : (b.TANGGAL ? b.TANGGAL.getTime() : 0);
+      return bw - aw;
+    })
+    .slice(0, 15)
+    .map(laporanRowToClient_);
+
+  // Tabel "Eksplorasi Laporan" — TIDAK dibatasi jendela hari ini/kemarin,
+  // cakupannya seluruh data sesuai filter tanggal yang dipilih user.
+  var filtered = filterLaporanHarian_(rows, f);
+  var page = paginate_(filtered, f.page, CONFIG.PAGE_SIZE);
+
+  return {
+    meta: {
+      source: 'MASTER LAPORAN HARIAN',
+      totalRows: rows.length,
+      updatedAt: Utilities.formatDate(new Date(), 'Asia/Jakarta', "dd MMMM yyyy 'pukul' HH:mm"),
+    },
+    kpi: {
+      totalWindow: windowRows.length,
+      totalHariIni: totalHariIni,
+      totalKemarin: totalKemarin,
+      sumberAktifWindow: Object.keys(sourceSetWindow).length,
+      tanggalTerakhir: latestTanggal ? formatTanggal_(latestTanggal) : '-',
+    },
+    bySourceToday: bySourceToday,
+    recentActivities: recentActivities,
+    filterOptions: { sources: knownSources },
+    table: {
+      rows: page.rows.map(function (r, i) {
+        var c = laporanRowToClient_(r);
+        c.no = (page.page - 1) * CONFIG.PAGE_SIZE + i + 1;
+        return c;
+      }),
+      page: page.page, totalPages: page.totalPages, total: page.total,
+    },
+  };
+}

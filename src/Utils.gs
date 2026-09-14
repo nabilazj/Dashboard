@@ -87,6 +87,31 @@ function toDate_(v) {
   return null;
 }
 
+/**
+ * Sama seperti toDate_(), TAPI mempertahankan jam:menit:detik (tidak
+ * dipotong ke 00:00) — dipakai khusus utk kolom "Waktu Input" di sheet
+ * MASTER LAPORAN HARIAN, yang formatnya "dd/mm/yyyy HH:mm:ss" (mis.
+ * "14/09/2026 15:29:57"). toDate_() biasa tidak cocok di sini karena dia
+ * SELALU membuang komponen jam (dipakai di TAGIHAN/dst yang memang cuma
+ * butuh tanggal murni).
+ */
+function toDateTimeKeepTime_(v) {
+  if (v === null || v === undefined || v === '') return null;
+  if (v instanceof Date) return v;
+  if (typeof v === 'number') {
+    if (v === 0) return null;
+    return new Date(Math.round((v - 25569) * 86400 * 1000));
+  }
+  var s = String(v).trim();
+  if (!s) return null;
+  var m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+  if (m) {
+    return new Date(+m[3], +m[2] - 1, +m[1], m[4] ? +m[4] : 0, m[5] ? +m[5] : 0, m[6] ? +m[6] : 0);
+  }
+  var d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
+}
+
 var ISO_DATE_RE_ = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 
 /**
@@ -133,6 +158,12 @@ function formatAngka_(n) {
 function formatTanggal_(d) {
   if (!d) return '-';
   return Utilities.formatDate(d, 'Asia/Jakarta', 'dd MMM yyyy');
+}
+
+/** Sama seperti formatTanggal_(), tapi ikut menampilkan jam:menit (utk "Waktu Input" dsb). */
+function formatTanggalJam_(d) {
+  if (!d) return '-';
+  return Utilities.formatDate(d, 'Asia/Jakarta', 'dd MMM yyyy HH:mm');
 }
 
 function monthIndexOf_(namaBulan) {

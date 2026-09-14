@@ -86,6 +86,16 @@ function buildCsvForPage_(pageName, f) {
     return { filename: 'dashboard_top_client_' + stamp_() + '.csv', csv: toCsv_(header6, body6) };
   }
 
+  if (pageName === 'laporan_harian') {
+    var laporanRows = loadLaporanHarian_();
+    var filteredLaporan = filterLaporanHarian_(laporanRows, f);
+    var header7 = ['Tanggal Laporan', 'Nama Area/Sumber', 'Kegiatan', 'Keterangan', 'Waktu Input'];
+    var body7 = filteredLaporan.map(function (r) {
+      return [formatTanggal_(r.TANGGAL), r.SOURCE, r.KEGIATAN, r.KETERANGAN, formatTanggalJam_(r.WAKTU_INPUT)];
+    });
+    return { filename: 'laporan_harian_' + stamp_() + '.csv', csv: toCsv_(header7, body7) };
+  }
+
   throw new Error('Halaman ekspor tidak dikenal: ' + pageName);
 }
 
@@ -106,6 +116,7 @@ function buildPdfForPage_(pageName, f) {
     mutasi: 'Riwayat Mutasi Pemasukan', tagihan: 'Rekap Tagihan Client',
     invoice: 'Monitoring Invoice Client', penggajian_jadwal: 'Jadwal Penggajian',
     penggajian_riwayat: 'Riwayat Penggajian per Client', dashboard: 'Top Client Tagihan Terlama',
+    laporan_harian: 'Eksplorasi Laporan Harian',
   };
 
   var doc = DocumentApp.create('TMP_EXPORT_' + stamp_());

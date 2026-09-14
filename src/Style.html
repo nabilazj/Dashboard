@@ -284,6 +284,46 @@
   .payroll-note-panel li{margin-bottom:8px;}
   .history-actions{display:flex;gap:10px;align-items:end;}
 
+  /* ---------- Halaman Laporan Harian ---------- */
+  .laporan-source-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;}
+  .laporan-source-card{background:var(--surface-3);border:1px solid var(--border-soft);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px;}
+  .laporan-source-head{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .laporan-source-head strong{font-size:12.5px;color:var(--navy);}
+  .laporan-source-badge{flex-shrink:0;min-width:22px;height:22px;padding:0 6px;border-radius:11px;background:var(--violet);color:#fff;
+    font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+  .laporan-source-list{display:flex;flex-direction:column;gap:7px;max-height:160px;overflow-y:auto;padding-right:2px;}
+  .laporan-source-item{font-size:11.5px;color:var(--ink);line-height:1.35;}
+  .laporan-source-item small{display:block;color:var(--muted);font-size:10.5px;margin-top:1px;}
+  .laporan-source-empty{font-size:11.5px;color:var(--muted);font-style:italic;}
+  .laporan-source-more{font-size:10.5px;color:var(--muted);}
+
+  .laporan-activity-list{display:flex;flex-direction:column;}
+  .laporan-activity-item{display:flex;gap:12px;padding:11px 0;border-bottom:1px solid var(--border-soft);}
+  .laporan-activity-item:last-child{border-bottom:none;}
+  .laporan-activity-date{flex:0 0 82px;font-size:11px;color:var(--muted);padding-top:1px;}
+  .laporan-activity-body strong{display:block;font-size:12.5px;color:var(--ink);font-weight:600;line-height:1.35;}
+  .laporan-activity-body small{display:block;font-size:11px;color:var(--muted);margin-top:3px;}
+
+  .laporan-note-empty{color:var(--muted);font-style:italic;}
+  .laporan-detail-btn{border:1px solid var(--line);background:var(--surface);color:var(--violet);font-weight:600;
+    font-size:11.5px;padding:5px 12px;border-radius:8px;cursor:pointer;}
+  .laporan-detail-btn:hover{background:var(--surface-hover);}
+
+  /* Modal (Detail Laporan) */
+  .modal-backdrop{position:fixed;inset:0;background:rgba(8,12,30,.45);z-index:9998;
+    display:flex;align-items:center;justify-content:center;padding:16px;}
+  .modal-backdrop[hidden]{display:none;}
+  .modal-box{background:var(--surface);border-radius:16px;max-width:480px;width:100%;max-height:85vh;overflow-y:auto;
+    box-shadow:0 20px 50px rgba(8,12,30,.35);}
+  .modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--border);}
+  .modal-head h3{margin:0;font-size:15px;color:var(--navy);}
+  .modal-close{border:none;background:none;font-size:18px;color:var(--muted);cursor:pointer;line-height:1;padding:4px;}
+  .modal-close:hover{color:var(--ink);}
+  .modal-body{padding:18px 20px;display:flex;flex-direction:column;gap:14px;}
+  .modal-field span{display:block;font-size:10.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:3px;}
+  .modal-field strong{display:block;font-size:13px;color:var(--ink);font-weight:500;line-height:1.4;white-space:pre-wrap;}
+  .modal-foot{padding:14px 20px 18px;display:flex;justify-content:flex-end;}
+
   /* ---------- Responsive ---------- */
   @media (max-width:1450px){
     .stats-grid.six{grid-template-columns:repeat(3,1fr);}

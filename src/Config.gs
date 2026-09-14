@@ -25,6 +25,11 @@ const CONFIG = {
   // Nama sheet di PAYROLL_ID
   SHEET_REKAP: 'REKAP',
 
+  // Spreadsheet sumber Laporan Harian (punya app "Dashboard Laporan Harian"
+  // yang terpisah — dibaca READ-ONLY dari sini, tidak pernah ditulis).
+  LAPORAN_HARIAN_ID: '1bpt-cvCI_ATJ-_rbKf_P3yXrarT0jZtpfl6P6jd1SPU',
+  SHEET_LAPORAN_HARIAN: 'MASTER DATA',
+
   // Termin pembayaran invoice default (hari) — bisa dioverride per client lewat
   // kolom TERMIN_HARI di sheet MASTER_CLIENT.
   DEFAULT_TERMIN_HARI: 30,

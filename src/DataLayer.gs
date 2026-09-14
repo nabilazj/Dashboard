@@ -418,3 +418,29 @@ function loadPayrollSchedule_(forceRefresh) {
     debug: { allTabNamesInSpreadsheet: sheetNames, monthTabsMatched: monthSheets, perSheetCount: perSheetCount },
   };
 }
+
+/* ============================= LAPORAN HARIAN ============================ */
+
+/**
+ * Baca sheet MASTER DATA di spreadsheet MASTER LAPORAN HARIAN (read-only,
+ * spreadsheet TERPISAH dari MASTER_DATA_ID/PAYROLL_ID — punya app
+ * "Dashboard Laporan Harian" tersendiri). Kolom aslinya: No, Waktu Input,
+ * Tanggal Laporan, Nama Area/Sumber, Kegiatan, Keterangan.
+ */
+function loadLaporanHarian_(forceRefresh) {
+  var raw = readSheetAsObjects_(CONFIG.LAPORAN_HARIAN_ID, CONFIG.SHEET_LAPORAN_HARIAN, forceRefresh);
+  return raw
+    .map(normalizeLaporanRow_)
+    .filter(function (r) { return r.TANGGAL || r.SOURCE || r.KEGIATAN || r.KETERANGAN; });
+}
+
+function normalizeLaporanRow_(r) {
+  return {
+    NO: r['No'],
+    WAKTU_INPUT: toDateTimeKeepTime_(r['Waktu Input']),
+    TANGGAL: toDate_(r['Tanggal Laporan']),
+    SOURCE: String(r['Nama Area/Sumber'] || '').trim(),
+    KEGIATAN: String(r['Kegiatan'] || '').trim(),
+    KETERANGAN: String(r['Keterangan'] || '').trim(),
+  };
+}

@@ -11,6 +11,7 @@
  *   .../exec?page=mutasi
  *   .../exec?page=invoice
  *   .../exec?page=penggajian
+ *   .../exec?page=laporan-harian
  */
 
 var PAGES_ = {
@@ -19,6 +20,7 @@ var PAGES_ = {
   mutasi: 'Page_Mutasi',
   invoice: 'Page_Invoice',
   penggajian: 'Page_Penggajian',
+  'laporan-harian': 'Page_LaporanHarian',
 };
 
 function doGet(e) {
@@ -85,6 +87,12 @@ function apiGetPenggajian(filters) {
   var rekap = loadRekapPenggajian_(force);
   var payroll = loadPayrollSchedule_(force);
   return getPenggajianData_(all, rekap, payroll, filters);
+}
+
+function apiGetLaporanHarian(filters) {
+  filters = filters || {};
+  var rows = loadLaporanHarian_(!!filters.forceRefresh);
+  return getLaporanHarianData_(rows, filters);
 }
 
 /* ================================ EXPORT CSV & PDF =================================== */

@@ -22,9 +22,18 @@ Penggajian) secara fungsional identik, tapi:
 |---|---|---|
 | **MASTER DATA** | `1UifGzezCofXDueyQKDFRTvu6MNuuXOwlsb97bilWN0E` | Sheet TAGIHAN, MUTASI, INVOICE, SALDO, MASTER_CLIENT |
 | **REKAP PENGGAJIAN 2026** | `1uD3WrDzp2XkamL1jGaTEwqy0teve8lh93qOo5xDIM1o` | Sheet REKAP + sheet per bulan (JANUARI, ..., THR) |
+| **MASTER LAPORAN HARIAN** | `1bpt-cvCI_ATJ-_rbKf_P3yXrarT0jZtpfl6P6jd1SPU` | Sheet MASTER DATA (dibaca READ-ONLY untuk halaman Laporan Harian) |
 
 ID ini sudah diisi di `src/Config.gs`. Kalau suatu saat pindah spreadsheet,
-**cukup ubah 2 baris di `Config.gs`** — jangan ubah file lain.
+**cukup ubah baris terkait di `Config.gs`** — jangan ubah file lain.
+
+**Soal halaman Laporan Harian**: ini menggabungkan 2 tampilan dari app
+"Dashboard Laporan Harian" (Dashboard + Eksplorasi Laporan) yang aslinya
+punya sistem login/role/kelola-pengguna sendiri, jadi 1 halaman ringkas di
+dalam Dashboard ini — **sengaja TIDAK membawa sistem login/role/allowedSources
+app aslinya** (dashboard ini sudah punya akses 1-pintu tersendiri lewat 1
+link web app). Spreadsheet MASTER LAPORAN HARIAN hanya dibaca, tidak pernah
+ditulis/diubah dari sini.
 
 Akun Google yang dipakai untuk membuat & men-deploy Apps Script ini **wajib
 punya akses baca (minimal Viewer)** ke kedua spreadsheet di atas. Sesuai
@@ -51,6 +60,7 @@ Page_Tagihan.html   - halaman "/tagihan"
 Page_Mutasi.html    - halaman "/mutasi"
 Page_Invoice.html   - halaman "/invoice"
 Page_Penggajian.html- halaman "/penggajian"
+Page_LaporanHarian.html - halaman "/laporan-harian"
 ```
 
 ## Instalasi
