@@ -176,6 +176,16 @@
 
   /* ---------- Halaman Tagihan: panel Top 10 sempit di samping tabel matrix ---------- */
   .tagihan-content-grid{display:grid;grid-template-columns:340px 1fr;gap:16px;align-items:start;}
+  /* Tanpa min-width:0 ini, kolom kanan (berisi tabel matrix min-width:900px +
+     judul panjang "DATA TAGIHAN · JANUARI – ... – SEPTEMBER") memaksa track
+     grid ikut melebar mengikuti isinya — seluruh HALAMAN jadi bisa di-scroll
+     ke samping (sidebar yang fixed jadi menutupi/memotong sisi kiri konten,
+     terlihat "berantakan"/terbalik), padahal seharusnya cuma tabelnya saja
+     yang scroll ke samping (lewat .matrix-scroll di dalamnya). Ini gotcha CSS
+     Grid standar: min-width default sebuah grid item adalah "auto" (ikut
+     ukuran konten aslinya), bukan 0.
+  */
+  .tagihan-content-grid > .panel{min-width:0;}
   .top10-narrow{margin-bottom:0;}
   .top10-list{display:flex;flex-direction:column;gap:10px;max-height:720px;overflow-y:auto;padding-right:2px;}
   .top10-card{display:flex;gap:10px;padding:11px;border:1px solid #eef0f7;border-radius:11px;background:#fbfcfe;}
@@ -224,6 +234,7 @@
 
   /* ---------- Penggajian-specific ---------- */
   .payroll-control-grid{display:grid;grid-template-columns:1.65fr 1fr;gap:16px;}
+  .payroll-control-grid > .panel,.payroll-history-grid > .panel{min-width:0;} /* cegah blowout grid, lihat catatan di .tagihan-content-grid */
   .payroll-fund-scroll{max-height:260px;overflow-y:auto;}
   .payroll-progress-wrap{display:flex;align-items:center;gap:18px;flex-wrap:wrap;}
   .payroll-progress-donut{width:110px;height:110px;border-radius:50%;position:relative;flex-shrink:0;}
