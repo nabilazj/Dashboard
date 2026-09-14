@@ -574,6 +574,14 @@ function getPenggajianData_(all, rekap, payroll, f) {
 
   return {
     meta: buildMeta_(all),
+    debug: {
+      rekapRowCount: rekap.length,
+      scheduleRowCountTotal: schedule.length,
+      payrollTabsFound: payroll.debug ? payroll.debug.allTabNamesInSpreadsheet : [],
+      payrollMonthTabsMatched: payroll.debug ? payroll.debug.monthTabsMatched : [],
+      payrollPerSheetCount: payroll.debug ? payroll.debug.perSheetCount : {},
+      currentSheetNameExpected: currentSheetName,
+    },
     kpi: {
       totalRencanaBulanIni: totalRencana, totalRencanaBulanIniCount: bulanIni.length,
       sudahDibayarkan: sudahDibayar, sudahDibayarkanCount: bulanIni.filter(function (s) { return s.STATUS === 'SUDAH DIBAYAR'; }).length,

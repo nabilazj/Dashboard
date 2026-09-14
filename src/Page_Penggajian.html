@@ -83,6 +83,11 @@
         </section>
       </div>
 
+      <section class="panel" id="debugPanel" style="border:1px dashed #cbb; background:#fffdf5;">
+        <div class="panel-head"><h2>INFO DIAGNOSTIK (SEMENTARA)</h2></div>
+        <div id="debugWrap" style="font-size:11.5px;color:var(--muted);line-height:1.7;"></div>
+      </section>
+
       <section class="panel table-panel payroll-history-panel">
         <div class="panel-head">
           <h2>RIWAYAT PENGGAJIAN PER CLIENT</h2>
@@ -135,8 +140,24 @@
       return { 'SUDAH DIBAYAR': 'paid', 'HARI INI': 'today', 'TERJADWAL': 'scheduled', 'PERLU KONFIRMASI': 'review', 'NOMINAL BELUM SIAP': 'warning' }[s] || '';
     }
 
+    function renderDebug(dbg) {
+      if (!dbg) { document.getElementById('debugWrap').innerHTML = '(tidak ada info debug)'; return; }
+      var perSheet = Object.keys(dbg.payrollPerSheetCount || {}).map(function (name) {
+        var c = dbg.payrollPerSheetCount[name];
+        return name + ': ' + c.jadwal + ' baris jadwal, ' + c.sudahDigaji + ' baris sudah-digaji';
+      }).join('<br>') || '(tidak ada tab bulan yang cocok sama sekali)';
+      document.getElementById('debugWrap').innerHTML =
+        '<b>Semua nama tab di spreadsheet REKAP PENGGAJIAN 2026:</b><br>' + App.esc((dbg.payrollTabsFound || []).join(', ') || '(kosong)') + '<br><br>' +
+        '<b>Tab bulan yang berhasil DICOCOKKAN dengan sistem:</b><br>' + App.esc((dbg.payrollMonthTabsMatched || []).join(', ') || '(tidak ada satupun cocok)') + '<br><br>' +
+        '<b>Jumlah baris per tab bulan:</b><br>' + perSheet + '<br><br>' +
+        '<b>Sistem mengharapkan tab bulan berjalan bernama:</b> ' + App.esc(dbg.currentSheetNameExpected) + '<br>' +
+        '<b>Total baris jadwal (semua bulan digabung):</b> ' + dbg.scheduleRowCountTotal + '<br>' +
+        '<b>Total baris di sheet REKAP:</b> ' + dbg.rekapRowCount;
+    }
+
     function render(d) {
       fillOptions(d.filterOptions);
+      renderDebug(d.debug);
       var k = d.kpi;
       document.getElementById('kpiRow').innerHTML = [
         kpiCard({ cls: 'violet', txt: '&Sigma;' }, 'TOTAL RENCANA BULAN INI', App.fmtRupiah(k.totalRencanaBulanIni), k.totalRencanaBulanIniCount + ' jadwal client'),

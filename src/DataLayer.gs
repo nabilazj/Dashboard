@@ -13,10 +13,27 @@
  * ---------------------------------------------------------------------------
  */
 
+/**
+ * Cari sheet berdasarkan nama TANPA peduli besar/kecil huruf atau spasi
+ * nyasar di awal/akhir. ss.getSheetByName() bawaan Apps Script itu
+ * case-SENSITIVE dan harus persis sama — kalau nama tab asli sedikit beda
+ * (mis. "September" vs "SEPTEMBER", atau ada spasi tersembunyi), fungsi
+ * bawaan diam-diam mengembalikan null dan seluruh data dari sheet itu
+ * hilang tanpa pesan error. Fungsi ini jadi jaring pengaman untuk itu.
+ */
+function findSheetCI_(ss, wantedName) {
+  var target = String(wantedName || '').trim().toUpperCase();
+  var sheets = ss.getSheets();
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].getName().trim().toUpperCase() === target) return sheets[i];
+  }
+  return null;
+}
+
 /** Baca 1 sheet penuh (LANGSUNG dari Spreadsheet, tanpa cache), kembalikan {header, rows} mentah. */
 function readSheetRawUncached_(spreadsheetId, sheetName) {
   var ss = SpreadsheetApp.openById(spreadsheetId);
-  var sheet = ss.getSheetByName(sheetName);
+  var sheet = findSheetCI_(ss, sheetName);
   if (!sheet) return { header: [], rows: [] };
   var lastRow = sheet.getLastRow();
   var lastCol = sheet.getLastColumn();
@@ -66,7 +83,7 @@ function readSheetAsObjects_(spreadsheetId, sheetName, forceRefresh) {
 /** Sama seperti readSheetAllRows_, tapi LANGSUNG dari Spreadsheet tanpa cache. */
 function readSheetAllRowsUncached_(spreadsheetId, sheetName) {
   var ss = SpreadsheetApp.openById(spreadsheetId);
-  var sheet = ss.getSheetByName(sheetName);
+  var sheet = findSheetCI_(ss, sheetName);
   if (!sheet) return [];
   var lastRow = sheet.getLastRow();
   var lastCol = sheet.getLastColumn();
@@ -318,16 +335,21 @@ function loadPayrollSchedule_(forceRefresh) {
   var sheetNames = withSheetCache_(['sheetnames', CONFIG.PAYROLL_ID], forceRefresh, function () {
     return SpreadsheetApp.openById(CONFIG.PAYROLL_ID).getSheets().map(function (sh) { return sh.getName(); });
   });
-  var existing = {};
-  sheetNames.forEach(function (n) { existing[n] = true; });
+  // Dicocokkan TANPA peduli besar/kecil huruf (lihat findSheetCI_) — nama
+  // tab asli tetap dipakai lagi ke parsePayrollMonthSheet_ tidak masalah
+  // karena readSheetAllRows_ di baliknya juga sudah case-insensitive.
+  var existingUpper = {};
+  sheetNames.forEach(function (n) { existingUpper[String(n).trim().toUpperCase()] = true; });
 
-  var monthSheets = CONFIG.MONTHS.filter(function (m) { return existing[m]; });
-  if (existing['THR']) monthSheets.push('THR');
+  var monthSheets = CONFIG.MONTHS.filter(function (m) { return !!existingUpper[m]; });
+  if (existingUpper['THR']) monthSheets.push('THR');
 
   var allSchedule = [];
   var allPaid = [];
+  var perSheetCount = {};
   monthSheets.forEach(function (name) {
     var parsed = parsePayrollMonthSheet_(name, forceRefresh);
+    perSheetCount[name] = { jadwal: parsed.schedule.length, sudahDigaji: parsed.paid.length };
     allSchedule = allSchedule.concat(parsed.schedule);
     allPaid = allPaid.concat(parsed.paid);
   });
@@ -362,5 +384,8 @@ function loadPayrollSchedule_(forceRefresh) {
     });
   });
 
-  return { schedule: allSchedule, paid: allPaid };
+  return {
+    schedule: allSchedule, paid: allPaid,
+    debug: { allTabNamesInSpreadsheet: sheetNames, monthTabsMatched: monthSheets, perSheetCount: perSheetCount },
+  };
 }
