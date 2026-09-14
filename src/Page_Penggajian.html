@@ -163,7 +163,7 @@
       var p = d.progres;
       document.getElementById('progressWrap').innerHTML =
         '<div class="payroll-progress-wrap">' +
-          '<div class="payroll-progress-donut" style="background:conic-gradient(#10c79a 0 ' + p.persen + '%, #e9edf5 ' + p.persen + '% 100%)">' +
+          '<div class="payroll-progress-donut" style="background:conic-gradient(#10c79a 0 ' + p.persen + '%, var(--border) ' + p.persen + '% 100%)">' +
           '<span>' + p.persen + '%<small>Terkonfirmasi</small></span></div>' +
           '<div class="progress-copy"><strong>' + App.fmtRupiah(p.sudah) + '</strong><span>dari ' + App.fmtRupiah(p.total) + '</span>' +
           '<div><i class="green-dot"></i> Sudah dibayar <b>' + k.sudahDibayarkanCount + '</b></div>' +

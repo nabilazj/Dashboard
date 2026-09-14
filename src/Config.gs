@@ -53,12 +53,21 @@ const CONFIG = {
 
   // Berapa lama data mentah tiap sheet disimpan di cache sementara
   // (CacheService, lihat Cache.gs) sebelum dibaca ulang dari Spreadsheet.
-  // Sedikit lebih lama dari interval polling frontend (60 detik) supaya
-  // kebanyakan siklus polling & perpindahan antar halaman kena cache hit.
-  // Perbesar kalau ingin lebih cepat tapi kurang real-time; perkecil kalau
-  // sebaliknya. Tombol "Perbarui data sekarang" di topbar SELALU melewati
-  // cache ini (forceRefresh) berapapun nilainya.
-  CACHE_SECONDS: 120,
+  // Dibuat lebih lama dari CACHE_WARMUP_MINUTES di bawah (dengan sedikit
+  // jeda pengaman) supaya SELAMA trigger pemanasan cache aktif (lihat
+  // Warmup.gs), cache tidak pernah sempat kedaluwarsa di antara 2 kali
+  // pemanasan — jadi pengguna nyaris tidak pernah kena "cache miss" yang
+  // lambat. Kalau trigger warmup TIDAK diaktifkan, nilai ini juga tetap
+  // aman dipakai sendirian (cuma berarti data bisa sedikit lebih basi,
+  // maksimal seusia nilai ini, sebelum dibaca ulang). Tombol "Perbarui
+  // data sekarang" di topbar SELALU melewati cache ini (forceRefresh)
+  // berapapun nilainya.
+  CACHE_SECONDS: 330,
+
+  // Interval (menit) trigger pemanasan cache otomatis — lihat Warmup.gs
+  // (fungsi warmupCache_ + installWarmupTrigger). Harus < CACHE_SECONDS/60
+  // supaya cache selalu diperbarui SEBELUM sempat kedaluwarsa.
+  CACHE_WARMUP_MINUTES: 5,
 
   // Jumlah baris per halaman untuk tabel dengan pagination server-side.
   PAGE_SIZE: 25,

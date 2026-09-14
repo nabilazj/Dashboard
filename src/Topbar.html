@@ -4,7 +4,10 @@
     <p><?= subtitle ?></p>
   </div>
   <div class="top-meta">
-    <strong id="todayLabel">&nbsp;</strong>
+    <div class="top-meta-row">
+      <strong id="todayLabel">&nbsp;</strong>
+      <button class="theme-toggle" id="themeToggle" title="Ganti tema" onclick="App.toggleTheme()"><span id="themeToggleIcon">&#9789;</span></button>
+    </div>
     <button class="sync-status" id="syncBtn" title="Perbarui data sekarang" onclick="window.__refreshNow && window.__refreshNow(true)">
       <span class="live-dot" id="syncDot"></span><span id="syncLabel">Memuat data&hellip;</span>
     </button>

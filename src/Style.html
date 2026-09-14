@@ -1,8 +1,26 @@
 <style>
   :root{
+    color-scheme:light;
     --navy:#111f4a; --navy2:#071b43; --ink:#16265e; --muted:#6875a0;
     --violet:#4b22ff; --green:#0bc89a; --red:#ef5b55; --yellow:#ffc72c; --cyan:#12b9dc;
     --line:#dfe5f0; --page:#f3f6fc; --white:#fff;
+    /* --brand-dark: TETAP biru navy gelap di kedua tema (dipakai tombol menu
+       mobile) — beda dari --navy yang di bawah ini SENGAJA ikut dibalik jadi
+       terang di mode gelap (dipakai utk warna teks judul/angka). */
+    --brand-dark:#111f4a;
+    /* Token permukaan/struktur — nilai di sini utk MODE TERANG (sama persis
+       seperti warna asli sebelum tema gelap ditambahkan, supaya tampilan
+       terang tidak berubah sama sekali). Mode gelap mendefinisikan ulang
+       semua token ini lewat [data-theme="dark"] di bagian paling bawah file. */
+    --surface:#ffffff; --surface-2:#f8f9fd; --surface-3:#fbfcfe; --surface-hover:#f5f3ff;
+    --border:#e9edf5; --border-soft:#f0f2f8; --input-bg:#ffffff; --chip-bg:#f3f6fc;
+  }
+  [data-theme="dark"]{
+    color-scheme:dark;
+    --navy:#eef1fb; --ink:#c7cfea; --muted:#8b93bf;
+    --line:#2a3560; --page:#0a1128;
+    --surface:#121b3e; --surface-2:#182352; --surface-3:#141d44; --surface-hover:#212a56;
+    --border:#263066; --border-soft:#1d274d; --input-bg:#101a3c; --chip-bg:#182352;
   }
   *{box-sizing:border-box;}
   body{margin:0;font-family:Inter,'Segoe UI',Arial,sans-serif;background:var(--page);color:var(--ink);font-size:14px;}
@@ -11,7 +29,7 @@
   input,select,button{font-family:inherit;font-size:13px;}
 
   .app-shell{display:flex;min-height:100vh;}
-  .mobile-menu{display:none;position:fixed;top:12px;left:12px;z-index:40;width:38px;height:38px;border-radius:9px;border:none;background:var(--navy);color:#fff;font-size:18px;}
+  .mobile-menu{display:none;position:fixed;top:12px;left:12px;z-index:40;width:38px;height:38px;border-radius:9px;border:none;background:var(--brand-dark);color:#fff;font-size:18px;}
 
   /* ---------- Sidebar ---------- */
   .sidebar{width:246px;flex:0 0 246px;position:fixed;top:0;left:0;bottom:0;
@@ -51,7 +69,7 @@
   .btn{border:none;border-radius:9px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;}
   .btn.danger{background:#ef5b55;color:#fff;box-shadow:0 5px 12px rgba(239,91,85,.2);}
   .btn.success{background:#0bc89a;color:#fff;box-shadow:0 5px 12px rgba(11,200,154,.2);}
-  .btn.reset{background:#fff;border:1px solid #dbe1ed;color:var(--ink);}
+  .btn.reset{background:var(--surface);border:1px solid var(--line);color:var(--ink);}
   .btn:disabled{opacity:.5;cursor:not-allowed;}
 
   /* ---------- KPI cards ---------- */
@@ -59,7 +77,7 @@
   .stats-grid.six{grid-template-columns:repeat(6,minmax(0,1fr));}
   .stats-grid.four{grid-template-columns:repeat(4,minmax(0,1fr));}
   .stats-grid.two{grid-template-columns:repeat(2,minmax(0,1fr));}
-  .stat-card{background:#fff;border:1px solid #edf0f7;border-radius:14px;padding:16px;
+  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;
     display:flex;align-items:flex-start;gap:12px;box-shadow:0 8px 22px rgba(24,42,91,.05);}
   .stat-icon{width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;
     font-weight:700;font-size:15px;flex-shrink:0;color:#4b22ff;background:#e7e3ff;}
@@ -74,19 +92,19 @@
   .stat-card small{display:block;color:var(--muted);font-size:11.5px;margin-top:2px;}
 
   /* ---------- Panels & tables ---------- */
-  .panel{background:#fff;border:1px solid #e9edf5;border-radius:15px;padding:18px;box-shadow:0 8px 22px rgba(24,42,91,.05);margin-bottom:18px;}
+  .panel{background:var(--surface);border:1px solid var(--border);border-radius:15px;padding:18px;box-shadow:0 8px 22px rgba(24,42,91,.05);margin-bottom:18px;}
   .panel-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;}
   .panel-head h2{margin:0;font-size:14px;letter-spacing:.02em;color:var(--navy);}
-  .result-count{font-size:11.5px;color:var(--muted);background:#f3f6fc;padding:3px 10px;border-radius:999px;}
+  .result-count{font-size:11.5px;color:var(--muted);background:var(--chip-bg);padding:3px 10px;border-radius:999px;}
   .panel-link{font-size:12.5px;color:var(--violet);font-weight:600;}
 
   .table-scroll{overflow-x:auto;}
   .data-table{width:100%;font-size:12.5px;}
-  .data-table th{position:sticky;top:0;background:#f8f9fd;color:var(--muted);text-align:left;
+  .data-table th{position:sticky;top:0;background:var(--surface-2);color:var(--muted);text-align:left;
     padding:9px 10px;font-size:11px;text-transform:uppercase;letter-spacing:.03em;border-bottom:1px solid var(--line);white-space:nowrap;}
-  .data-table td{padding:9px 10px;border-bottom:1px solid #f0f2f8;color:var(--ink);white-space:nowrap;}
-  .data-table tbody tr:nth-child(2n){background:#fbfcfe;}
-  .data-table tbody tr:hover{background:#f5f3ff;}
+  .data-table td{padding:9px 10px;border-bottom:1px solid var(--border-soft);color:var(--ink);white-space:nowrap;}
+  .data-table tbody tr:nth-child(2n){background:var(--surface-3);}
+  .data-table tbody tr:hover{background:var(--surface-hover);}
   .data-table td.location{white-space:normal;min-width:180px;}
   .total-cell,.balance-amount,.money-in{font-weight:700;}
   .balance-amount,.money-in{color:#08a878;}
@@ -94,7 +112,7 @@
   .empty-state{padding:26px 10px;text-align:center;color:var(--muted);font-size:13px;}
   .empty-state.success-empty{color:#08a878;}
   .pager{display:flex;justify-content:center;align-items:center;gap:14px;padding-top:12px;font-size:12.5px;color:var(--muted);}
-  .pager button{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:#fff;cursor:pointer;}
+  .pager button{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--surface);cursor:pointer;}
   .pager button:disabled{opacity:.4;cursor:not-allowed;}
 
   /* ---------- Badges/pills ---------- */
@@ -113,18 +131,18 @@
   .payroll-status.scheduled{color:#2169a7;background:#e8f2ff;}
   .payroll-status.today{color:#4b22ff;background:#e7e3ff;}
   .month-pill{color:#048c68;background:#dcfaee;}
-  .month-pill.dash{color:#a7add0;background:#f0f2f8;font-weight:400;}
+  .month-pill.dash{color:#a7add0;background:var(--border-soft);font-weight:400;}
   .month-pill.unpaid{color:#cf3535;background:#ffe3e3;}
 
   /* ---------- Filters ---------- */
   .filter-panel{padding-bottom:14px;}
   .filters{display:flex;flex-wrap:wrap;gap:12px;align-items:end;}
   .field{display:flex;flex-direction:column;gap:5px;font-size:11.5px;color:var(--muted);font-weight:600;}
-  .field input,.field select{padding:8px 10px;border:1px solid var(--line);border-radius:8px;color:var(--ink);min-width:150px;background:#fff;}
+  .field input,.field select{padding:8px 10px;border:1px solid var(--line);border-radius:8px;color:var(--ink);min-width:150px;background:var(--input-bg);}
   .field.search-field{flex:1;min-width:200px;}
   .field.search-field input{min-width:100%;}
   .period-tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;}
-  .period-tabs button{padding:8px 16px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--ink);font-size:12.5px;font-weight:600;cursor:pointer;}
+  .period-tabs button{padding:8px 16px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:12.5px;font-weight:600;cursor:pointer;}
   .period-tabs button.active{background:var(--violet);border-color:var(--violet);color:#fff;}
 
   /* ---------- Dashboard-specific ---------- */
@@ -150,7 +168,7 @@
 
   .donut-wrap{display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:center;}
   .donut{width:120px;height:120px;border-radius:50%;position:relative;flex-shrink:0;}
-  .donut::before{content:'';position:absolute;inset:16px;background:#fff;border-radius:50%;}
+  .donut::before{content:'';position:absolute;inset:16px;background:var(--surface);border-radius:50%;}
   .donut span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:var(--navy);}
   .donut-legend{display:flex;flex-direction:column;gap:6px;font-size:11.5px;}
   .donut-legend .sw{width:9px;height:9px;border-radius:3px;display:inline-block;margin-right:6px;}
@@ -158,12 +176,12 @@
   .horizontal-bars{display:flex;flex-direction:column;gap:10px;}
   .hbar-row{font-size:12px;}
   .hbar-row .hbar-label{display:flex;justify-content:space-between;margin-bottom:4px;color:var(--ink);}
-  .hbar-track{background:#f0f2f8;border-radius:999px;height:8px;overflow:hidden;}
+  .hbar-track{background:var(--border-soft);border-radius:999px;height:8px;overflow:hidden;}
   .hbar-fill{height:100%;border-radius:999px;}
 
   .status-chart{display:flex;align-items:center;gap:16px;justify-content:center;}
   .status-donut{width:120px;height:120px;border-radius:50%;position:relative;}
-  .status-donut::before{content:'';position:absolute;inset:16px;background:#fff;border-radius:50%;}
+  .status-donut::before{content:'';position:absolute;inset:16px;background:var(--surface);border-radius:50%;}
   .status-donut span{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:700;font-size:17px;color:var(--navy);}
   .status-donut span small{font-weight:500;font-size:10.5px;color:var(--muted);}
   .status-legend{display:flex;flex-direction:column;gap:6px;font-size:12px;}
@@ -188,7 +206,7 @@
   .tagihan-content-grid > .panel{min-width:0;}
   .top10-narrow{margin-bottom:0;}
   .top10-list{display:flex;flex-direction:column;gap:10px;max-height:720px;overflow-y:auto;padding-right:2px;}
-  .top10-card{display:flex;gap:10px;padding:11px;border:1px solid #eef0f7;border-radius:11px;background:#fbfcfe;}
+  .top10-card{display:flex;gap:10px;padding:11px;border:1px solid var(--border-soft);border-radius:11px;background:var(--surface-3);}
   .top10-rank{flex:0 0 22px;height:22px;border-radius:50%;background:#e7e3ff;color:#4b22ff;font-weight:700;font-size:11px;
     display:flex;align-items:center;justify-content:center;margin-top:1px;}
   .top10-body{min-width:0;flex:1;}
@@ -207,17 +225,17 @@
      dengan scroll 2 arah (mengikuti area yang tingginya dibatasi) ---------- */
   .matrix-scroll{max-height:640px;overflow:auto;}
   .matrix-scroll table.matrix{min-width:900px;}
-  .matrix-scroll table.matrix th{position:sticky;top:0;z-index:2;background:#f8f9fd;}
+  .matrix-scroll table.matrix th{position:sticky;top:0;z-index:2;background:var(--surface-2);}
   .matrix-scroll table.matrix td:nth-child(1),.matrix-scroll table.matrix th:nth-child(1){
-    position:sticky;left:0;z-index:3;background:#fff;width:44px;min-width:44px;}
+    position:sticky;left:0;z-index:3;background:var(--surface);width:44px;min-width:44px;}
   .matrix-scroll table.matrix td:nth-child(2),.matrix-scroll table.matrix th:nth-child(2){
-    position:sticky;left:44px;z-index:3;background:#fff;min-width:190px;
+    position:sticky;left:44px;z-index:3;background:var(--surface);min-width:190px;
     box-shadow:4px 0 6px -4px rgba(24,42,91,.18);}
-  .matrix-scroll table.matrix thead th:nth-child(1),.matrix-scroll table.matrix thead th:nth-child(2){z-index:4;background:#f8f9fd;}
+  .matrix-scroll table.matrix thead th:nth-child(1),.matrix-scroll table.matrix thead th:nth-child(2){z-index:4;background:var(--surface-2);}
   .matrix-scroll table.matrix tbody tr:nth-child(2n) td:nth-child(1),
-  .matrix-scroll table.matrix tbody tr:nth-child(2n) td:nth-child(2){background:#fbfcfe;}
+  .matrix-scroll table.matrix tbody tr:nth-child(2n) td:nth-child(2){background:var(--surface-3);}
   .matrix-scroll table.matrix tbody tr:hover td:nth-child(1),
-  .matrix-scroll table.matrix tbody tr:hover td:nth-child(2){background:#f5f3ff;}
+  .matrix-scroll table.matrix tbody tr:hover td:nth-child(2){background:var(--surface-hover);}
   @media (max-width:1100px){
     .matrix-scroll{max-height:70vh;}
   }
@@ -225,10 +243,11 @@
   .bottom-summary{display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:16px;}
   .bottom-summary.two-col{grid-template-columns:1fr 1fr;margin-bottom:18px;}
   .bottom-summary.one-col{grid-template-columns:1fr;}
-  .bottom-summary>div{background:#fff;border:1px solid #edf0f7;border-radius:14px;padding:16px;box-shadow:0 8px 22px rgba(24,42,91,.05);}
+  .bottom-summary>div{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;box-shadow:0 8px 22px rgba(24,42,91,.05);}
   .bottom-summary span{font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;}
   .bottom-summary strong{display:block;font-size:19px;color:var(--navy);margin-top:4px;}
   .reminder-card{background:#fffaf0 !important;border-color:#ffe6b3 !important;}
+  [data-theme="dark"] .reminder-card{background:#241f0c !important;border-color:#453a12 !important;}
   .reminder-card ul{margin:8px 0 0;padding-left:18px;font-size:12.5px;color:var(--ink);}
   .reminder-card li{margin-bottom:4px;}
 
@@ -238,7 +257,7 @@
   .payroll-fund-scroll{max-height:260px;overflow-y:auto;}
   .payroll-progress-wrap{display:flex;align-items:center;gap:18px;flex-wrap:wrap;}
   .payroll-progress-donut{width:110px;height:110px;border-radius:50%;position:relative;flex-shrink:0;}
-  .payroll-progress-donut::before{content:'';position:absolute;inset:15px;background:#fff;border-radius:50%;}
+  .payroll-progress-donut::before{content:'';position:absolute;inset:15px;background:var(--surface);border-radius:50%;}
   .payroll-progress-donut span{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:700;font-size:16px;color:var(--navy);}
   .payroll-progress-donut span small{font-size:10px;font-weight:500;color:var(--muted);}
   .progress-copy strong{font-size:18px;color:var(--navy);display:block;}
@@ -249,7 +268,7 @@
   .payroll-alert.warn{background:#fff3cf;color:#916200;}
   .payroll-progress-datepick{min-width:0;}
   .payroll-progress-datepick input{min-width:0;width:150px;}
-  .payroll-progress-asof{margin-top:12px;padding:10px 12px;border-radius:10px;background:#f5f6fb;font-size:12px;color:var(--ink);}
+  .payroll-progress-asof{margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--surface-2);font-size:12px;color:var(--ink);}
   .payroll-progress-asof span{color:var(--muted);}
   .payroll-history-grid{display:grid;grid-template-columns:1.55fr 1fr;gap:16px;}
   .payroll-history-table td.location{max-width:220px;}
@@ -260,6 +279,7 @@
   .payroll-trend-item strong{font-size:10.5px;color:var(--navy);}
   .payroll-trend-item span{font-size:10.5px;color:var(--muted);}
   .payroll-note-panel{background:#fffdf5;border-color:#f5edd0;}
+  [data-theme="dark"] .payroll-note-panel{background:#1c1809;border-color:#3a2f0d;}
   .payroll-note-panel ul{margin:0;padding-left:18px;font-size:12.5px;}
   .payroll-note-panel li{margin-bottom:8px;}
   .history-actions{display:flex;gap:10px;align-items:end;}
@@ -289,8 +309,37 @@
     .period-tabs{display:grid;grid-template-columns:1fr 1fr;}
   }
   @media print{
-    .sidebar,.mobile-menu,.filter-panel,.actions,.pager,.sync-status{display:none !important;}
+    .sidebar,.mobile-menu,.filter-panel,.actions,.pager,.sync-status,.theme-toggle,.page-loader{display:none !important;}
     .main-area{margin-left:0;}
     .data-table{min-width:100%;}
   }
+
+  /* ---------- Toggle tema terang/gelap ---------- */
+  .theme-toggle{width:34px;height:34px;flex-shrink:0;border-radius:9px;border:1px solid var(--line);
+    background:var(--surface);color:var(--ink);font-size:15px;cursor:pointer;display:inline-flex;
+    align-items:center;justify-content:center;}
+  .theme-toggle:hover{background:var(--surface-hover);}
+  .top-meta-row{display:flex;align-items:center;justify-content:flex-end;gap:8px;}
+
+  /* ---------- Overlay loading halaman pertama kali ---------- */
+  .page-loader{position:fixed;inset:0;background:var(--page);z-index:9999;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+    transition:opacity .25s ease;}
+  .page-loader.hide{opacity:0;pointer-events:none;}
+  .page-loader-spinner{width:36px;height:36px;border-radius:50%;border:3px solid var(--border);
+    border-top-color:var(--violet);animation:pageLoaderSpin .8s linear infinite;}
+  .page-loader span{font-size:12.5px;color:var(--muted);font-weight:600;}
+  @keyframes pageLoaderSpin{to{transform:rotate(360deg);}}
 </style>
+<script>
+  // Terapkan tema TERSIMPAN (atau preferensi sistem kalau belum pernah
+  // pilih) SESEGERA MUNGKIN — script ini sengaja diletakkan di <head>,
+  // sebelum <body> dirender, supaya tidak ada "kedipan" tema salah
+  // sesaat sebelum berganti ke tema yang benar.
+  (function () {
+    var saved = null;
+    try { saved = localStorage.getItem('rmp_theme'); } catch (e) {}
+    var theme = saved || ((window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+  })();
+</script>

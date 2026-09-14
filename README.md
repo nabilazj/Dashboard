@@ -37,6 +37,7 @@ appsscript.json     - manifest project (timezone, izin web app)
 Config.gs           - SEMUA konstanta (ID spreadsheet, nama sheet, asumsi)
 Utils.gs            - helper murni (format Rupiah, tanggal, dll — tanpa akses Sheet)
 Cache.gs            - cache sementara (CacheService) supaya buka halaman ke-2/3/dst lebih cepat
+Warmup.gs           - trigger terjadwal utk "memanaskan" cache di latar belakang (lihat README bag. Caching)
 DataLayer.gs        - satu-satunya file yang menyentuh SpreadsheetApp
 Aggregations.gs     - rumus KPI & agregasi tiap halaman
 Export.gs           - generator CSV & PDF asli
@@ -160,21 +161,30 @@ sudah diperbaiki:
 ## Caching (Supaya Buka Halaman ke-2/3/dst Lebih Cepat)
 
 Bagian paling lambat dari tiap kali buka halaman adalah **membaca ulang
-Sheet** (TAGIHAN ~3.000 baris, INVOICE ~2.000, MUTASI ~2.800, dst). Sekarang
-data mentah tiap sheet disimpan sementara lewat `CacheService` (lihat
-`src/Cache.gs`):
+Sheet** (TAGIHAN ~3.000 baris, INVOICE ~2.000, MUTASI ~2.800, dst — dan
+untuk Penggajian bisa belasan sheet sekaligus: REKAP + tiap tab bulan yang
+ada). Sekarang data mentah tiap sheet disimpan sementara lewat
+`CacheService` (lihat `src/Cache.gs`):
 
-- Cache berlaku **120 detik** (`CONFIG.CACHE_SECONDS` di `Config.gs`, ubah
-  di situ kalau mau lebih cepat/lebih real-time).
-- Selama masih dalam 120 detik itu, buka halaman Tagihan lalu Mutasi lalu
-  Invoice dst **tidak perlu baca ulang Spreadsheet** — tinggal ambil dari
-  cache (jauh lebih cepat, biasanya di bawah setengah detik untuk bagian
-  ambil datanya).
-- Setelah 120 detik, pembacaan berikutnya otomatis ambil data segar dari
+- Cache berlaku **330 detik** (`CONFIG.CACHE_SECONDS` di `Config.gs`, ubah
+  di situ kalau mau lebih cepat/lebih real-time — lihat juga bagian
+  "Mempercepat Loading Pertama Kali" di bawah, nilai ini sengaja dipasangkan
+  dengan jadwal trigger pemanasan cache).
+- Selama masih dalam jendela cache itu, buka halaman Tagihan lalu Mutasi
+  lalu Invoice dst **tidak perlu baca ulang Spreadsheet** — tinggal ambil
+  dari cache (jauh lebih cepat, biasanya di bawah setengah detik untuk
+  bagian ambil datanya).
+- Setelah kadaluarsa, pembacaan berikutnya otomatis ambil data segar dari
   Sheet lagi (dan cache-nya diperbarui).
 - Karena data mentah tiap sheet bisa lebih dari 100KB (batas 1 entry
   CacheService), datanya **dipecah jadi beberapa potongan** lalu digabung
   lagi saat dibaca — ini otomatis, tidak perlu diapa-apakan.
+- **`SpreadsheetApp.openById()` tidak lagi dipanggil berkali-kali untuk
+  spreadsheet yang sama** dalam 1 kali request (`openSS_()` di
+  `DataLayer.gs`) — sebelumnya halaman Penggajian bisa membuka ulang file
+  REKAP PENGGAJIAN 2026 belasan kali (1x per tab bulan) padahal filenya
+  sama persis; ini salah satu penyebab utama loading Penggajian jauh lebih
+  lambat dari halaman lain.
 - Tombol **"Perbarui data sekarang"** di kanan atas tiap halaman **selalu
   melewati cache** (ambil langsung dari Sheet saat itu juga) — pakai ini
   kalau Anda baru saja edit Sheet dan ingin lihat perubahannya seketika
@@ -184,12 +194,45 @@ data mentah tiap sheet disimpan sementara lewat `CacheService` (lihat
   syarat aplikasi bisa jalan.
 
 **Perhatian**: karena data dibagi ke banyak pengguna lewat cache yang sama,
-kalau dua orang buka dashboard dalam jendela 120 detik yang sama, orang
-kedua akan melihat data se-segar terakhir kali cache ditulis (maksimal
-120 detik lebih lama) — bukan detik itu juga. Untuk dashboard monitoring
+kalau dua orang buka dashboard dalam jendela cache yang sama, orang kedua
+akan melihat data se-segar terakhir kali cache ditulis (maksimal seusia
+`CACHE_SECONDS`) — bukan detik itu juga. Untuk dashboard monitoring
 internal, ini trade-off yang wajar; kalau Anda butuh selalu real-time
-walau lebih lambat, kecilkan `CACHE_SECONDS` jadi misalnya `20` atau `0`
-(0 = cache dimatikan efektif, karena TTL sekejap).
+walau lebih lambat, kecilkan `CACHE_SECONDS`.
+
+### Mempercepat Loading PERTAMA Kali (Trigger Pemanasan Cache)
+
+Cache di atas hanya membantu buka halaman KEDUA dst — pembukaan **pertama**
+di hari itu (atau setelah cache kadaluarsa) tetap kena baca langsung dari
+Sheet dan terasa lambat, terutama halaman Penggajian. Untuk mengatasi ini
+ada `src/Warmup.gs`: fungsi yang membaca ulang semua sheet secara otomatis
+di **latar belakang, terjadwal, tanpa perlu ada orang yang membuka
+dashboard sama sekali** — jadi begitu benar-benar ada yang buka, cache-nya
+hampir selalu sudah hangat.
+
+**Cara aktifkan (dilakukan sekali saja):**
+1. Buka project ini di editor Apps Script (script.google.com).
+2. Di dropdown fungsi (sebelah tombol ▶ Jalankan), pilih `installWarmupTrigger`.
+3. Klik **▶ Jalankan**. Google akan minta izin akses — setujui (hanya sekali).
+4. Selesai. Trigger berjalan otomatis tiap `CONFIG.CACHE_WARMUP_MINUTES`
+   menit (default 5 menit), terus-menerus, walau tidak ada yang membuka
+   editor sama sekali.
+
+Untuk mematikan lagi, jalankan fungsi `removeWarmupTrigger` dengan cara
+yang sama. Ini murni optimasi latar belakang — kalau tidak diaktifkan,
+aplikasi tetap jalan normal seperti biasa (cuma pembukaan pertama tiap kali
+cache kosong akan tetap terasa seperti sebelumnya).
+
+## Tema Terang & Gelap
+
+Ada tombol toggle (ikon matahari/bulan) di kanan atas tiap halaman, di
+sebelah tanggal — klik untuk berpindah antara mode terang dan gelap.
+Pilihan disimpan di browser (localStorage), jadi diingat untuk kunjungan
+berikutnya; kalau belum pernah memilih, dashboard otomatis mengikuti
+pengaturan sistem/browser (terang/gelap) perangkat Anda. Semua warna diatur
+lewat CSS custom properties di `src/Style.html` (`:root` untuk terang,
+`[data-theme="dark"]` untuk gelap) — kalau suatu saat ingin menyesuaikan
+warna tema gelap, cukup ubah nilai di blok `[data-theme="dark"]` itu saja.
 
 ## Keterbatasan Platform (bukan pilihan desain)
 

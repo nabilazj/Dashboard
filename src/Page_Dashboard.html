@@ -112,7 +112,7 @@
         acc += pct;
         return b.color + ' ' + start + '% ' + acc + '%';
       });
-      var donutBg = gradientParts.length ? 'conic-gradient(' + gradientParts.join(',') + ')' : '#e7eaf2';
+      var donutBg = gradientParts.length ? 'conic-gradient(' + gradientParts.join(',') + ')' : 'var(--border)';
       var bankLegend = d.donutBank.map(function (b) {
         var pct = bankTotal > 0 ? Math.round(b.value / bankTotal * 100) : 0;
         return '<span><span class="sw" style="background:' + b.color + '"></span>' + App.esc(b.label) + ' ' + pct + '%</span>';
@@ -126,7 +126,7 @@
       var st = d.statusDonut;
       var pct = st.pctLunas === null ? 0 : st.pctLunas;
       var statusLabel = st.pctLunas === null ? '&mdash;' : pct + '%';
-      var statusBg = st.pctLunas === null ? '#e7eaf2' : 'conic-gradient(#10c79a 0 ' + pct + '%, #f15b50 ' + pct + '% 100%)';
+      var statusBg = st.pctLunas === null ? 'var(--border)' : 'conic-gradient(#10c79a 0 ' + pct + '%, #f15b50 ' + pct + '% 100%)';
 
       document.getElementById('chartGrid').innerHTML =
         '<section class="panel trend-panel"><div class="panel-head"><h2>TREND TAGIHAN &amp; PEMBAYARAN (' + d.tahun + ')</h2></div>' +

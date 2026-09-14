@@ -14,6 +14,26 @@
  */
 
 /**
+ * PERFORMA — jangan panggil SpreadsheetApp.openById() berkali-kali untuk ID
+ * yang sama dalam satu request. openById() BUKAN operasi gratis (ada
+ * overhead tersendiri tiap dipanggil, terpisah dari getValues()) — sebelum
+ * ada fungsi ini, tiap kali baca 1 sheet (readSheetRawUncached_/
+ * readSheetAllRowsUncached_) selalu openById() lagi dari nol, walau
+ * spreadsheet-nya sama. Untuk halaman Penggajian ini sangat terasa: 1 kali
+ * apiGetPenggajian() bisa baca belasan sheet (REKAP + tiap tab bulan yang
+ * ada, bisa sampai 10 tab) dari PAYROLL_ID yang SAMA — tanpa fungsi ini,
+ * itu berarti belasan kali openById() untuk file yang sama persis. Objek
+ * Spreadsheet di-cache di variabel global ssCache_ ini SELAMA satu kali
+ * eksekusi server (dibersihkan otomatis begitu request selesai — variabel
+ * global Apps Script tidak bocor ke request lain).
+ */
+var ssCache_ = {};
+function openSS_(spreadsheetId) {
+  if (!ssCache_[spreadsheetId]) ssCache_[spreadsheetId] = SpreadsheetApp.openById(spreadsheetId);
+  return ssCache_[spreadsheetId];
+}
+
+/**
  * Cari sheet berdasarkan nama TANPA peduli besar/kecil huruf atau spasi
  * nyasar di awal/akhir. ss.getSheetByName() bawaan Apps Script itu
  * case-SENSITIVE dan harus persis sama — kalau nama tab asli sedikit beda
@@ -32,7 +52,7 @@ function findSheetCI_(ss, wantedName) {
 
 /** Baca 1 sheet penuh (LANGSUNG dari Spreadsheet, tanpa cache), kembalikan {header, rows} mentah. */
 function readSheetRawUncached_(spreadsheetId, sheetName) {
-  var ss = SpreadsheetApp.openById(spreadsheetId);
+  var ss = openSS_(spreadsheetId);
   var sheet = findSheetCI_(ss, sheetName);
   if (!sheet) return { header: [], rows: [] };
   var lastRow = sheet.getLastRow();
@@ -82,7 +102,7 @@ function readSheetAsObjects_(spreadsheetId, sheetName, forceRefresh) {
 
 /** Sama seperti readSheetAllRows_, tapi LANGSUNG dari Spreadsheet tanpa cache. */
 function readSheetAllRowsUncached_(spreadsheetId, sheetName) {
-  var ss = SpreadsheetApp.openById(spreadsheetId);
+  var ss = openSS_(spreadsheetId);
   var sheet = findSheetCI_(ss, sheetName);
   if (!sheet) return [];
   var lastRow = sheet.getLastRow();
@@ -342,7 +362,7 @@ function parsePayrollMonthSheet_(sheetName, forceRefresh) {
  */
 function loadPayrollSchedule_(forceRefresh) {
   var sheetNames = withSheetCache_(['sheetnames', CONFIG.PAYROLL_ID], forceRefresh, function () {
-    return SpreadsheetApp.openById(CONFIG.PAYROLL_ID).getSheets().map(function (sh) { return sh.getName(); });
+    return openSS_(CONFIG.PAYROLL_ID).getSheets().map(function (sh) { return sh.getName(); });
   });
   // Dicocokkan TANPA peduli besar/kecil huruf (lihat findSheetCI_) — nama
   // tab asli tetap dipakai lagi ke parsePayrollMonthSheet_ tidak masalah
