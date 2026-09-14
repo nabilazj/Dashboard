@@ -68,15 +68,11 @@ function buildCsvForPage_(pageName, f) {
   if (pageName === 'penggajian_riwayat') {
     var rekap = loadRekapPenggajian_();
     var today2 = all.today;
-    var isAllPeriode5 = f.periodeIdx === 'ALL';
-    var periodeIdx = isAllPeriode5 ? 'ALL' : (f.periodeIdx !== undefined && f.periodeIdx !== '' ? toNumber_(f.periodeIdx) : today2.getMonth());
-    var riwayat = isAllPeriode5
-      ? buildRiwayatAll_(rekap, f.searchHistory, today2.getMonth())
-      : buildRiwayat_(rekap, CONFIG.MONTHS[periodeIdx], periodeIdx > 0 ? CONFIG.MONTHS[periodeIdx - 1] : null, f.searchHistory);
-    var header5 = ['No', 'Client', 'Periode', 'Nominal', 'Bulan Sebelumnya', 'Perubahan (%)', 'Status Data'];
+    var riwayat = buildRiwayatMatrix_(rekap, today2.getMonth(), f.searchHistory);
+    var riwayatMonths = CONFIG.MONTHS.slice(0, today2.getMonth() + 1);
+    var header5 = ['No', 'Nama Client'].concat(riwayatMonths, ['Total']);
     var body5 = riwayat.map(function (r, i) {
-      return [i + 1, r.client, r.periode, Math.round(r.nominal), r.bulanSebelumnya === null ? '-' : Math.round(r.bulanSebelumnya),
-        r.perubahan === null ? '-' : r.perubahan.toFixed(1), 'Tercatat di REKAP'];
+      return [i + 1, r.client].concat(r.cells.map(function (n) { return Math.round(n); }), [Math.round(r.total)]);
     });
     return { filename: 'riwayat_penggajian_' + stamp_() + '.csv', csv: toCsv_(header5, body5) };
   }

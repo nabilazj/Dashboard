@@ -469,6 +469,13 @@ function filterSchedule_(schedule, f, today, awalBulan, akhirBulan, in7Hari) {
   if (rentang === 'TODAY') { scopeStart = today; scopeEnd = today; }
   else if (rentang === '7D') { scopeStart = today; scopeEnd = in7Hari; }
   else if (rentang === 'MONTH') { scopeSheet = CONFIG.MONTHS[today.getMonth()]; } // lihat catatan di getPenggajianData_
+  else if (rentang === 'ASOF') {
+    // "Sampai Tanggal Proyeksi" — jendela sama persis dengan yang dipakai
+    // tabel KESIAPAN DANA (lihat asOfDate di getPenggajianData_): hari ini
+    // s.d. tanggal yang dipilih user di "Proyeksi s.d. tanggal".
+    var asOf = (f.progresTanggal && toDate_(f.progresTanggal)) || today;
+    scopeStart = today; scopeEnd = asOf.getTime() >= today.getTime() ? asOf : today;
+  }
   // rentang === 'ALL' -> tanpa batas tanggal/sheet
 
   var search = (f.search || '').toLowerCase();
@@ -489,55 +496,21 @@ function filterSchedule_(schedule, f, today, awalBulan, akhirBulan, in7Hari) {
 }
 
 /**
- * Sama seperti buildRiwayat_, tapi untuk pilihan "Semua Bulan" (bukan 1
- * periode saja) — menggabungkan baris client x bulan dari SEMUA bulan yang
- * sudah berjalan tahun ini, terbaru dulu.
+ * RIWAYAT PENGGAJIAN PER CLIENT — bentuk matrix (NO, NAMA CLIENT, lalu 1
+ * kolom per bulan berjalan), persis seperti sheet REKAP PENGGAJIAN 2026
+ * aslinya (bukan daftar per client x 1 periode lagi).
  */
-function buildRiwayatAll_(rekap, searchHistoryRaw, currentMonthIdx) {
+function buildRiwayatMatrix_(rekap, currentMonthIdx, searchHistoryRaw) {
   var searchHist = (searchHistoryRaw || '').toLowerCase();
-  var out = [];
-  for (var mi = 0; mi <= currentMonthIdx; mi++) {
-    var bulan = CONFIG.MONTHS[mi];
-    var prevBulan = mi > 0 ? CONFIG.MONTHS[mi - 1] : null;
-    rekap.forEach(function (r) {
-      if (searchHist && r.CLIENT.toLowerCase().indexOf(searchHist) === -1) return;
-      var nominal = r.MONTHS[bulan] || 0;
-      if (nominal <= 0) return;
-      var sebelumnya = prevBulan ? (r.MONTHS[prevBulan] || 0) : null;
-      var perubahan = null, badge = 'awal';
-      if (sebelumnya !== null) {
-        if (sebelumnya === 0) { perubahan = nominal > 0 ? 100 : 0; }
-        else perubahan = (nominal - sebelumnya) / sebelumnya * 100;
-        badge = perubahan > 0 ? 'up' : (perubahan < 0 ? 'down' : 'flat');
-      }
-      out.push({ client: r.CLIENT, periode: bulan, nominal: nominal, bulanSebelumnya: sebelumnya, perubahan: perubahan, badge: badge });
-    });
-  }
-  out.sort(function (a, b) {
-    var ia = monthIndexOf_(a.periode), ib = monthIndexOf_(b.periode);
-    if (ib !== ia) return ib - ia; // bulan terbaru dulu
-    return b.nominal - a.nominal;
-  });
-  return out;
-}
-
-function buildRiwayat_(rekap, bulanTerpilih, bulanSebelumnyaName, searchHistoryRaw) {
-  var searchHist = (searchHistoryRaw || '').toLowerCase();
+  var months = CONFIG.MONTHS.slice(0, currentMonthIdx + 1);
   return rekap
     .filter(function (r) { return !searchHist || r.CLIENT.toLowerCase().indexOf(searchHist) !== -1; })
     .map(function (r) {
-      var nominal = r.MONTHS[bulanTerpilih] || 0;
-      var sebelumnya = bulanSebelumnyaName ? (r.MONTHS[bulanSebelumnyaName] || 0) : null;
-      var perubahan = null, badge = 'awal';
-      if (sebelumnya !== null) {
-        if (sebelumnya === 0) { perubahan = nominal > 0 ? 100 : 0; }
-        else perubahan = (nominal - sebelumnya) / sebelumnya * 100;
-        badge = perubahan > 0 ? 'up' : (perubahan < 0 ? 'down' : 'flat');
-      }
-      return { client: r.CLIENT, periode: bulanTerpilih, nominal: nominal, bulanSebelumnya: sebelumnya, perubahan: perubahan, badge: badge };
+      var cells = months.map(function (m) { return r.MONTHS[m] || 0; });
+      return { client: r.CLIENT, cells: cells, total: sum_(cells) };
     })
-    .filter(function (r) { return r.nominal > 0; })
-    .sort(function (a, b) { return b.nominal - a.nominal; });
+    .filter(function (r) { return r.total > 0; })
+    .sort(function (a, b) { return b.total - a.total; });
 }
 
 function getPenggajianData_(all, rekap, payroll, f) {
@@ -548,6 +521,14 @@ function getPenggajianData_(all, rekap, payroll, f) {
   var awalBulan = new Date(today.getFullYear(), today.getMonth(), 1);
   var akhirBulan = new Date(today.getFullYear(), today.getMonth() + 1, 0);
   var in7Hari = new Date(today.getTime() + 7 * 86400000);
+
+  // "Proyeksi s.d. tanggal" — 1 tanggal pilihan user yang menggerakkan 3 hal
+  // sekaligus: tabel KESIAPAN DANA, kartu KEKURANGAN DANA, dan (kalau Rentang
+  // Jadwal = "Sampai Tanggal Proyeksi") tabel JADWAL PENGGAJIAN. Kalau belum
+  // dipilih / tanggalnya di masa lalu, dianggap = hari ini (jendela kosong,
+  // bukan negatif).
+  var progresTanggal = (f.progresTanggal && toDate_(f.progresTanggal)) || today;
+  var asOfDate = progresTanggal.getTime() >= today.getTime() ? progresTanggal : today;
 
   // PENTING: "bulan ini" diambil berdasarkan SHEET TAB aktif (mis. tab
   // "SEPTEMBER"), BUKAN tanggal kalender baris itu — karena tanggal
@@ -562,24 +543,31 @@ function getPenggajianData_(all, rekap, payroll, f) {
   var totalRencana = sum_(bulanIni, function (s) { return s.NOMINAL; });
   var sudahDibayar = sum_(bulanIni.filter(function (s) { return s.STATUS === 'SUDAH DIBAYAR'; }), function (s) { return s.NOMINAL; });
   var jadwalHariIni = schedule.filter(function (s) { return s.TANGGAL.getTime() === today.getTime(); });
+  // KPI "KEBUTUHAN 7 HARI" — TETAP literal 7 hari kalender dari hari ini,
+  // tidak ikut berubah oleh "Proyeksi s.d. tanggal" (itu kartu ringkas yang
+  // labelnya memang "7 HARI"; yang dinamis ada di tabel KESIAPAN DANA di
+  // bawah, lihat kesiapanDanaRows).
   var kebutuhan7Rows = schedule.filter(function (s) { return s.TANGGAL >= today && s.TANGGAL <= in7Hari && s.STATUS !== 'SUDAH DIBAYAR'; });
 
-  // Kesiapan dana per rekening (lihat CONFIG.PAYROLL_FUNDING_ACCOUNTS & BANK_TO_REKENING)
+  // Kesiapan dana per rekening, DARI HARI INI SAMPAI TANGGAL PROYEKSI yang
+  // dipilih user (lihat CONFIG.PAYROLL_FUNDING_ACCOUNTS & BANK_TO_REKENING)
+  // — ini yang membuat tabel KESIAPAN DANA & kartu KEKURANGAN DANA otomatis
+  // ikut berubah begitu "Proyeksi s.d. tanggal" diganti, supaya kelihatan
+  // apakah dana cukup untuk seluruh jangka waktu itu, dan rekening mana yang
+  // kurang.
+  var kesiapanDanaRows = schedule.filter(function (s) { return s.TANGGAL >= today && s.TANGGAL <= asOfDate && s.STATUS !== 'SUDAH DIBAYAR'; });
   var saldoByRekening = {};
   all.saldo.forEach(function (s) { saldoByRekening[s.REKENING] = s.SALDO; });
   var kesiapanDana = CONFIG.PAYROLL_FUNDING_ACCOUNTS.map(function (rek) {
-    var kebutuhan = sum_(kebutuhan7Rows.filter(function (s) { return s.REKENING_BAYAR === rek; }), function (s) { return s.NOMINAL; });
+    var kebutuhan = sum_(kesiapanDanaRows.filter(function (s) { return s.REKENING_BAYAR === rek; }), function (s) { return s.NOMINAL; });
     var saldoRek = saldoByRekening[rek] || 0;
     var proyeksi = saldoRek - kebutuhan;
     return { rekening: rek, saldo: saldoRek, kebutuhan: kebutuhan, proyeksiSisa: proyeksi, kondisi: proyeksi >= 0 ? 'Cukup' : 'Kurang' };
   });
   var kekuranganDana = sum_(kesiapanDana, function (k) { return Math.max(0, -k.proyeksiSisa); });
 
-  // Proyeksi kustom "PROGRES PEMBAYARAN BULAN INI" — user pilih tanggal
-  // (default hari ini), lalu dihitung total jadwal bulan berjalan yang
-  // tanggalnya <= tanggal itu (dari sheet bulan berjalan, sama seperti
-  // scope totalRencana/sudahDibayar di atas).
-  var progresTanggal = (f.progresTanggal && toDate_(f.progresTanggal)) || today;
+  // Proyeksi kustom "PROGRES PEMBAYARAN BULAN INI" — total jadwal bulan
+  // berjalan (sheet aktif) yang tanggalnya <= tanggal proyeksi.
   var sampaiTanggalRows = bulanIni.filter(function (s) { return s.TANGGAL.getTime() <= progresTanggal.getTime(); });
   var sampaiTanggalNominal = sum_(sampaiTanggalRows, function (s) { return s.NOMINAL; });
 
@@ -597,24 +585,9 @@ function getPenggajianData_(all, rekap, payroll, f) {
   var maxTrend = Math.max(1, Math.max.apply(null, trend.map(function (t) { return t.value; }).concat([0])));
   trend.forEach(function (t) { t.pct = t.value / maxTrend * 100; });
 
-  // Riwayat Penggajian per Client
-  // Default cerdas: pilih bulan TERAKHIR yang sheet REKAP-nya sudah benar-benar
-  // terisi (bukan langsung bulan kalender berjalan) — supaya panel Riwayat
-  // tidak tampak kosong kalau REKAP bulan ini belum sempat diisi ulang.
-  var latestFilledMonthIdx = 0;
-  for (var mi = 0; mi <= currentMonthIdx; mi++) {
-    var bulanCek = CONFIG.MONTHS[mi];
-    if (rekap.some(function (r) { return (r.MONTHS[bulanCek] || 0) > 0; })) latestFilledMonthIdx = mi;
-  }
-  var isAllPeriode = f.periodeIdx === 'ALL';
-  var periodeIdx = isAllPeriode
-    ? 'ALL'
-    : (f.periodeIdx !== undefined && f.periodeIdx !== '' && f.periodeIdx !== null)
-      ? toNumber_(f.periodeIdx) : latestFilledMonthIdx;
-  var bulanTerpilih = isAllPeriode ? 'SEMUA BULAN' : CONFIG.MONTHS[periodeIdx];
-  var riwayat = isAllPeriode
-    ? buildRiwayatAll_(rekap, f.searchHistory, currentMonthIdx)
-    : buildRiwayat_(rekap, bulanTerpilih, periodeIdx > 0 ? CONFIG.MONTHS[periodeIdx - 1] : null, f.searchHistory);
+  // Riwayat Penggajian per Client — bentuk matrix (lihat buildRiwayatMatrix_)
+  var riwayatMonths = CONFIG.MONTHS.slice(0, currentMonthIdx + 1);
+  var riwayat = buildRiwayatMatrix_(rekap, currentMonthIdx, f.searchHistory);
   var riwayatPage = paginate_(riwayat, f.pageHistory, CONFIG.PAGE_SIZE);
 
   return {
@@ -628,6 +601,10 @@ function getPenggajianData_(all, rekap, payroll, f) {
       kekuranganDana: kekuranganDana,
     },
     kesiapanDana: kesiapanDana,
+    asOf: {
+      tanggal: Utilities.formatDate(asOfDate, 'Asia/Jakarta', 'yyyy-MM-dd'),
+      tanggalLabel: formatTanggal_(asOfDate),
+    },
     progres: {
       persen: totalRencana > 0 ? Math.round(sudahDibayar / totalRencana * 100) : 0, sudah: sudahDibayar, total: totalRencana,
       tanggal: Utilities.formatDate(progresTanggal, 'Asia/Jakarta', 'yyyy-MM-dd'),
@@ -650,13 +627,11 @@ function getPenggajianData_(all, rekap, payroll, f) {
     },
     trend: trend,
     riwayat: {
-      periodeIdx: periodeIdx, bulanTerpilih: bulanTerpilih,
+      months: riwayatMonths,
       rows: riwayatPage.rows.map(function (r, i) {
         return {
           no: (riwayatPage.page - 1) * CONFIG.PAGE_SIZE + i + 1,
-          client: r.client, periode: r.periode, nominal: r.nominal,
-          bulanSebelumnya: r.bulanSebelumnya, perubahan: r.perubahan, badge: r.badge,
-          statusData: 'Tercatat di REKAP',
+          client: r.client, cells: r.cells, total: r.total,
         };
       }),
       page: riwayatPage.page, totalPages: riwayatPage.totalPages, total: riwayatPage.total,

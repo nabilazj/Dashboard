@@ -23,7 +23,7 @@
 
       <div class="payroll-control-grid">
         <section class="panel fund-readiness-panel">
-          <div class="panel-head"><h2>KESIAPAN DANA 7 HARI KE DEPAN</h2><span class="result-count">Saldo vs kebutuhan</span></div>
+          <div class="panel-head"><h2 id="fundTitle">KESIAPAN DANA</h2><span class="result-count">Saldo vs kebutuhan</span></div>
           <div class="table-scroll payroll-fund-scroll">
             <table class="data-table payroll-fund-table">
               <thead><tr><th>Rekening</th><th>Saldo</th><th>Kebutuhan</th><th>Proyeksi Sisa</th><th>Kondisi</th></tr></thead>
@@ -43,8 +43,8 @@
       <section class="panel filter-panel payroll-filter">
         <div class="filters">
           <label class="field"><span>Rentang Jadwal</span>
-            <select id="fRentang"><option value="TODAY">Hari Ini</option><option value="7D">7 Hari ke Depan</option>
-              <option value="MONTH" selected>Bulan Berjalan</option><option value="ALL">Semua Jadwal</option></select>
+            <select id="fRentang"><option value="ASOF" selected>Sampai Tanggal Proyeksi</option><option value="TODAY">Hari Ini</option>
+              <option value="7D">7 Hari ke Depan</option><option value="MONTH">Bulan Berjalan</option><option value="ALL">Semua Jadwal</option></select>
           </label>
           <label class="field"><span>Status</span>
             <select id="fStatus"><option value="ALL">Semua Status</option><option>SUDAH DIBAYAR</option><option>HARI INI</option>
@@ -90,13 +90,13 @@
         <div class="panel-head">
           <h2>RIWAYAT PENGGAJIAN PER CLIENT</h2>
           <div class="history-actions">
-            <label class="field"><span>Periode</span><select id="fPeriodeHist"></select></label>
+            <span class="result-count" id="histCount"></span>
             <label class="field search-field"><span>Pencarian</span><input type="text" id="fSearchHist" placeholder="Cari nama client..."></label>
           </div>
         </div>
-        <div class="table-scroll">
-          <table class="data-table payroll-history-table">
-            <thead><tr><th>No</th><th>Client</th><th>Periode</th><th>Nominal</th><th>Bulan Sebelumnya</th><th>Perubahan</th><th>Status Data</th></tr></thead>
+        <div class="table-scroll matrix-scroll">
+          <table class="data-table matrix payroll-history-table">
+            <thead id="histThead"></thead>
             <tbody id="histBody"></tbody>
           </table>
         </div>
@@ -107,23 +107,19 @@
 
   <?!= include('ClientScript'); ?>
   <script>
-    var MONTHS = ['JANUARI','FEBRUARI','MARET','APRIL','MEI','JUNI','JULI','AGUSTUS','SEPTEMBER','OKTOBER','NOVEMBER','DESEMBER'];
-    var thisMonthIdx = new Date().getMonth();
-    var state = { rentang: 'MONTH', status: 'ALL', bank: 'ALL', picRekap: 'ALL', search: '', page: 1,
-      periodeIdx: thisMonthIdx, searchHistory: '', pageHistory: 1, progresTanggal: '' };
-    var optionsLoaded = false;
-
-    var periodeHistSel = document.getElementById('fPeriodeHist');
-    periodeHistSel.innerHTML += '<option value="ALL">Semua Bulan</option>';
-    MONTHS.slice(0, thisMonthIdx + 1).forEach(function (m, i) {
-      periodeHistSel.innerHTML += '<option value="' + i + '" ' + (i === thisMonthIdx ? 'selected' : '') + '>' + m + '</option>';
-    });
-
-    function todayIsoLocal_() {
-      var d = new Date();
+    function isoLocal_(daysFromNow) {
+      var d = new Date(); d.setDate(d.getDate() + (daysFromNow || 0));
       return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
     }
-    document.getElementById('fProgresTanggal').value = todayIsoLocal_();
+    // Default dibuka: proyeksi 7 hari ke depan (lihat revisi user) — jadwal,
+    // kesiapan dana & kekurangan dana langsung kelihatan utk 7 hari ke depan
+    // tanpa perlu klik apapun; tinggal ganti tanggalnya utk jendela lain.
+    var defaultProgresTanggal = isoLocal_(7);
+    var state = { rentang: 'ASOF', status: 'ALL', bank: 'ALL', picRekap: 'ALL', search: '', page: 1,
+      searchHistory: '', pageHistory: 1, progresTanggal: defaultProgresTanggal };
+    var optionsLoaded = false;
+
+    document.getElementById('fProgresTanggal').value = defaultProgresTanggal;
 
     function currentFilters() { return Object.assign({}, state); }
 
@@ -157,6 +153,7 @@
         kpiCard({ cls: k.kekuranganDana > 0 ? 'red' : 'green', txt: '!' }, 'KEKURANGAN DANA', App.fmtRupiah(k.kekuranganDana), k.kekuranganDana > 0 ? 'Perlu pindah dana' : 'Semua rekening mencukupi'),
       ].join('');
 
+      document.getElementById('fundTitle').textContent = 'KESIAPAN DANA S.D. ' + d.asOf.tanggalLabel;
       document.getElementById('fundBody').innerHTML = d.kesiapanDana.map(function (r) {
         return '<tr><td class="account-name"><span>' + App.esc(r.rekening) + '</span></td><td>' + App.fmtRupiah(r.saldo) + '</td>' +
           '<td>' + App.fmtRupiah(r.kebutuhan) + '</td><td class="' + (r.proyeksiSisa >= 0 ? 'money-in' : '') + '">' + App.fmtRupiah(r.proyeksiSisa) + '</td>' +
@@ -174,8 +171,8 @@
         '</div>' +
         '<div class="payroll-progress-asof"><b>Proyeksi s.d. ' + App.esc(p.tanggalLabel) + ':</b> ' + App.fmtRupiah(p.sampaiTanggalNominal) + ' <span>(' + p.sampaiTanggalCount + ' jadwal)</span></div>' +
         (k.kekuranganDana > 0
-          ? '<div class="payroll-alert warn"><strong>Perlu perhatian dana</strong><p>Ada rekening dengan proyeksi saldo minus untuk kebutuhan 7 hari ke depan.</p></div>'
-          : '<div class="payroll-alert safe"><strong>Dana penggajian aman</strong><p>Saldo rekening penggajian mencukupi kebutuhan tujuh hari ke depan.</p></div>');
+          ? '<div class="payroll-alert warn"><strong>Perlu perhatian dana</strong><p>Ada rekening dengan proyeksi saldo minus untuk kebutuhan s.d. ' + App.esc(d.asOf.tanggalLabel) + '.</p></div>'
+          : '<div class="payroll-alert safe"><strong>Dana penggajian aman</strong><p>Saldo rekening penggajian mencukupi kebutuhan s.d. ' + App.esc(d.asOf.tanggalLabel) + '.</p></div>');
 
       document.getElementById('jadwalCount').textContent = d.jadwal.total + ' jadwal';
       document.getElementById('jadwalBody').innerHTML = d.jadwal.rows.map(function (r) {
@@ -194,23 +191,17 @@
           '<strong>' + App.fmtRupiah(t.value).replace('Rp ', 'Rp') + '</strong><span>' + t.label + '</span></div>';
       }).join('');
 
+      document.getElementById('histThead').innerHTML = '<tr><th>No</th><th>Nama Client</th>' +
+        d.riwayat.months.map(function (m) { return '<th>' + m + '</th>'; }).join('') + '<th>Total</th></tr>';
+      document.getElementById('histCount').textContent = d.riwayat.total + ' client';
       document.getElementById('histBody').innerHTML = d.riwayat.rows.map(function (r) {
-        var badgeTxt = r.badge === 'awal' ? 'Data awal' : (r.perubahan > 0 ? '+' : '') + r.perubahan.toFixed(1) + '%';
-        return '<tr><td>' + r.no + '</td><td class="location">' + App.esc(r.client) + '</td><td>' + r.periode + ' ' + new Date().getFullYear() + '</td>' +
-          '<td class="total-cell">' + App.fmtRupiah(r.nominal) + '</td>' +
-          '<td>' + (r.bulanSebelumnya === null ? '&mdash;' : App.fmtRupiah(r.bulanSebelumnya)) + '</td>' +
-          '<td><span class="change-pill ' + r.badge + '">' + badgeTxt + '</span></td>' +
-          '<td><span class="data-ready">' + App.esc(r.statusData) + '</span></td></tr>';
+        var cells = r.cells.map(function (n) {
+          return '<td>' + (n > 0 ? App.fmtAngka(n) : '<span class="month-pill dash">&mdash;</span>') + '</td>';
+        }).join('');
+        return '<tr><td>' + r.no + '</td><td class="location">' + App.esc(r.client) + '</td>' + cells +
+          '<td class="total-cell">' + App.fmtRupiah(r.total) + '</td></tr>';
       }).join('');
       renderPager('histPager', d.riwayat, function (pg) { state.pageHistory = pg; reload(); });
-
-      // Server bisa memilih bulan default sendiri (bulan terakhir yang sheet
-      // REKAP-nya benar-benar terisi) kalau kita belum pernah pilih manual —
-      // samakan tampilan dropdown & state supaya tidak membingungkan.
-      if (state.periodeIdx !== d.riwayat.periodeIdx) {
-        state.periodeIdx = d.riwayat.periodeIdx;
-        periodeHistSel.value = String(d.riwayat.periodeIdx);
-      }
     }
 
     function renderPager(elId, t, onChange) {
@@ -233,19 +224,15 @@
       });
     });
     document.getElementById('fSearch').addEventListener('input', App.debounce(function () { state.search = this.value; state.page = 1; reload(); }, 400));
-    document.getElementById('fProgresTanggal').addEventListener('change', function () { state.progresTanggal = this.value; reload(); });
-    document.getElementById('fPeriodeHist').addEventListener('change', function () {
-      state.periodeIdx = this.value === 'ALL' ? 'ALL' : Number(this.value); state.pageHistory = 1; reload();
-    });
+    document.getElementById('fProgresTanggal').addEventListener('change', function () { state.progresTanggal = this.value; state.page = 1; reload(); });
     document.getElementById('fSearchHist').addEventListener('input', App.debounce(function () { state.searchHistory = this.value; state.pageHistory = 1; reload(); }, 400));
     document.getElementById('btnReset').addEventListener('click', function () {
-      state = { rentang: 'MONTH', status: 'ALL', bank: 'ALL', picRekap: 'ALL', search: '', page: 1,
-        periodeIdx: thisMonthIdx, searchHistory: '', pageHistory: 1, progresTanggal: todayIsoLocal_() };
-      document.getElementById('fRentang').value = 'MONTH'; document.getElementById('fStatus').value = 'ALL';
+      state = { rentang: 'ASOF', status: 'ALL', bank: 'ALL', picRekap: 'ALL', search: '', page: 1,
+        searchHistory: '', pageHistory: 1, progresTanggal: isoLocal_(7) };
+      document.getElementById('fRentang').value = 'ASOF'; document.getElementById('fStatus').value = 'ALL';
       document.getElementById('fBank').value = 'ALL'; document.getElementById('fPic').value = 'ALL';
       document.getElementById('fSearch').value = ''; document.getElementById('fSearchHist').value = '';
       document.getElementById('fProgresTanggal').value = state.progresTanggal;
-      periodeHistSel.value = String(thisMonthIdx);
       reload();
     });
 
