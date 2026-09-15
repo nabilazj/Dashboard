@@ -142,20 +142,19 @@
       var statusBg = st.pctLunas === null ? 'var(--border)' : 'conic-gradient(#10c79a 0 ' + pct + '%, #f15b50 ' + pct + '% 100%)';
 
       document.getElementById('chartGrid').innerHTML =
-        // Baris atas: Trend (lebih lebar) berdampingan dgn Sisa Piutang per PIC Admin.
-        '<div class="dashboard-grid-top">' +
+        // Satu baris, 4 panel sejajar: Trend (dipersempit) · Sisa Piutang per PIC
+        // Admin (daftar 2 kolom biar tidak perlu discroll) · Sisa Piutang per Bank
+        // · Status Tagihan — semua rata sebaris, tidak lagi 2 baris terpisah.
+        '<div class="dashboard-quad-grid">' +
           '<section class="panel trend-panel"><div class="panel-head"><h2>TREND TAGIHAN &amp; PEMBAYARAN (' + d.tahun + ')</h2></div>' +
             '<div class="legend"><span><i class="lg invoice"></i>Tagihan</span><span><i class="lg paid"></i>Terbayar</span></div>' +
             '<div class="bar-chart">' + bars + '</div></section>' +
-          '<section class="panel"><div class="panel-head"><h2>SISA PIUTANG BERDASARKAN PIC ADMIN</h2><span class="result-count">' + d.picBar.length + ' PIC</span></div>' +
-            '<div class="hbar-scroll"><div class="horizontal-bars">' + (picBars || '<div class="empty-state">Belum ada data.</div>') + '</div></div></section>' +
-        '</div>' +
-        // Baris bawah: donut Sisa Piutang per Bank (dipersempit) berdampingan dgn donut Status Tagihan.
-        '<div class="dashboard-grid-bottom">' +
+          '<section class="panel picadmin-panel"><div class="panel-head"><h2>SISA PIUTANG BERDASARKAN PIC ADMIN</h2><span class="result-count">' + d.picBar.length + ' PIC</span></div>' +
+            '<div class="hbar-scroll"><div class="horizontal-bars horizontal-bars-2col">' + (picBars || '<div class="empty-state">Belum ada data.</div>') + '</div></div></section>' +
           '<section class="panel bank-donut-panel"><div class="panel-head"><h2>SISA PIUTANG BERDASARKAN BANK</h2></div>' +
-            '<div class="donut-wrap"><div class="donut" style="background:' + donutBg + '"><span>' + App.fmtRupiah(bankTotal) + '</span></div>' +
+            '<div class="donut-wrap"><div class="donut" style="background:' + donutBg + '"><span>' + App.fmtRupiahSingkat(bankTotal) + '</span></div>' +
             '<div class="donut-legend">' + bankLegend + '</div></div></section>' +
-          '<section class="panel"><div class="panel-head"><h2>STATUS TAGIHAN</h2></div>' +
+          '<section class="panel status-panel"><div class="panel-head"><h2>STATUS TAGIHAN</h2></div>' +
             '<div class="status-chart"><div class="status-donut" style="background:' + statusBg + '"><span>' + statusLabel + '<small>Lunas</small></span></div>' +
             '<div class="status-legend"><span><i class="green-dot"></i>Lunas <b>' + st.lunas + '</b></span>' +
             '<span><i class="red-dot"></i>Belum Bayar <b>' + st.belumBayar + '</b></span></div></div></section>' +

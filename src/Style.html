@@ -156,11 +156,11 @@
   .live-source i{width:7px;height:7px;border-radius:50%;background:#08a878;display:inline-block;}
   .balance-scroll{max-height:280px;overflow-y:auto;}
 
-  /* Dashboard: 2 baris 2-kolom (bukan 1 baris 4-kolom lagi) — baris atas
-     Trend + PIC Admin (Trend lebih lebar), baris bawah donut Bank + donut
-     Status Tagihan (sama lebar, lebih sempit). */
-  .dashboard-grid-top{display:grid;grid-template-columns:1.6fr 1fr;gap:16px;align-items:stretch;}
-  .dashboard-grid-bottom{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:stretch;margin-top:16px;}
+  /* Dashboard: 1 baris, 4 panel sejajar — Trend (dipersempit) · Sisa Piutang
+     per PIC Admin (daftar 2 kolom, tanpa perlu scroll) · Sisa Piutang per
+     Bank · Status Tagihan. Semua panel rata sebaris (bukan 2 baris lagi). */
+  .dashboard-quad-grid{display:grid;grid-template-columns:1.3fr 1.15fr 1fr 1fr;gap:16px;align-items:stretch;}
+  .dashboard-quad-grid > .panel{min-width:0;}
   .legend{display:flex;gap:14px;font-size:11.5px;color:var(--muted);margin-bottom:8px;}
   .legend i.lg{width:10px;height:10px;border-radius:3px;display:inline-block;margin-right:5px;}
   .legend i.lg.invoice{background:var(--violet);} .legend i.lg.paid{background:var(--cyan);}
@@ -190,7 +190,12 @@
   .bank-donut-panel .donut-wrap{gap:14px;}
 
   .horizontal-bars{display:flex;flex-direction:column;gap:10px;}
-  .hbar-scroll{max-height:280px;overflow-y:auto;overflow-x:hidden;padding-right:2px;}
+  /* Daftar PIC Admin dibagi 2 kolom (CSS multi-column, otomatis "seimbang"
+     kiri/kanan) supaya panel yang sekarang sejajar dgn Trend tidak perlu
+     discroll ke bawah lagi meski PIC-nya banyak. */
+  .horizontal-bars.horizontal-bars-2col{display:block;column-count:2;column-gap:18px;}
+  .horizontal-bars.horizontal-bars-2col .hbar-row{break-inside:avoid;-webkit-column-break-inside:avoid;margin-bottom:10px;}
+  .hbar-scroll{max-height:340px;overflow-y:auto;overflow-x:hidden;padding-right:2px;}
   .hbar-row{font-size:12px;min-width:0;}
   .hbar-row .hbar-label{display:flex;justify-content:space-between;gap:8px;margin-bottom:4px;color:var(--ink);}
   .hbar-row .hbar-label span{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -333,6 +338,12 @@
   .modal-foot{padding:14px 20px 18px;display:flex;justify-content:flex-end;}
 
   /* ---------- Responsive ---------- */
+  /* Layar lebar penuh: 4 panel dashboard sejajar 1 baris. Di bawah ~1650px
+     kombinasi lebar sidebar + 4 kolom mulai sesak, jadi turun ke 2x2 dulu
+     (masih 1 kolom PIC Admin karena ruangnya sudah lebih lega per panel). */
+  @media (max-width:1650px){
+    .dashboard-quad-grid{grid-template-columns:1fr 1fr;}
+  }
   @media (max-width:1450px){
     .stats-grid.six{grid-template-columns:repeat(3,1fr);}
     .stats-grid.four{grid-template-columns:repeat(2,1fr);}
@@ -348,7 +359,8 @@
     .sidebar{transform:translateX(-102%);}
     .sidebar.open{transform:translateX(0);}
     .main-area{margin-left:0;padding:0 16px 40px;}
-    .dashboard-grid-top,.dashboard-grid-bottom{grid-template-columns:1fr;}
+    .dashboard-quad-grid{grid-template-columns:1fr;}
+    .horizontal-bars.horizontal-bars-2col{column-count:1;}
     .filters{grid-template-columns:1fr 1fr;display:grid;}
   }
   @media (max-width:560px){
