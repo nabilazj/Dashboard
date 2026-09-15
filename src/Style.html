@@ -164,10 +164,10 @@
   .legend{display:flex;gap:14px;font-size:11.5px;color:var(--muted);margin-bottom:8px;}
   .legend i.lg{width:10px;height:10px;border-radius:3px;display:inline-block;margin-right:5px;}
   .legend i.lg.invoice{background:var(--violet);} .legend i.lg.paid{background:var(--cyan);}
-  .bar-chart{display:flex;gap:8px;align-items:end;height:118px;overflow-x:auto;padding-top:6px;}
-  .bar-group{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:34px;flex:1;}
-  .bar-value{font-size:9px;line-height:1.35;text-align:center;white-space:nowrap;}
-  .bar-value b{display:block;font-weight:700;}
+  .bar-chart{display:flex;gap:10px;align-items:end;height:118px;overflow-x:auto;overflow-y:hidden;padding-top:6px;}
+  .bar-group{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:46px;flex:1;}
+  .bar-value{font-size:9px;line-height:1.35;text-align:center;white-space:nowrap;width:100%;overflow:hidden;text-overflow:ellipsis;}
+  .bar-value b{display:block;font-weight:700;overflow:hidden;text-overflow:ellipsis;}
   .bar-value .inv{color:var(--violet);}
   .bar-value .pay{color:var(--cyan);}
   .bars{display:flex;gap:3px;align-items:end;height:64px;}
@@ -181,16 +181,20 @@
   .donut span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:var(--navy);}
   .donut-legend{display:flex;flex-direction:column;gap:6px;font-size:11.5px;}
   .donut-legend .sw{width:9px;height:9px;border-radius:3px;display:inline-block;margin-right:6px;}
-  /* Donut Sisa Piutang per Bank — dipersempit lagi supaya pas berdampingan dengan Status Tagihan. */
-  .bank-donut-panel .donut{width:92px;height:92px;}
-  .bank-donut-panel .donut::before{inset:13px;}
-  .bank-donut-panel .donut span{font-size:11px;}
-  .bank-donut-panel .donut-wrap{gap:12px;}
+  /* Donut Sisa Piutang per Bank — sedikit dilebarkan lagi dari 92px (biar
+     tidak terlalu kosong dibanding donut Status Tagihan 120px di sebelahnya)
+     tapi tetap lebih ramping dari ukuran normal. */
+  .bank-donut-panel .donut{width:104px;height:104px;}
+  .bank-donut-panel .donut::before{inset:14px;}
+  .bank-donut-panel .donut span{font-size:12px;}
+  .bank-donut-panel .donut-wrap{gap:14px;}
 
   .horizontal-bars{display:flex;flex-direction:column;gap:10px;}
-  .hbar-scroll{max-height:280px;overflow-y:auto;padding-right:2px;}
-  .hbar-row{font-size:12px;}
-  .hbar-row .hbar-label{display:flex;justify-content:space-between;margin-bottom:4px;color:var(--ink);}
+  .hbar-scroll{max-height:280px;overflow-y:auto;overflow-x:hidden;padding-right:2px;}
+  .hbar-row{font-size:12px;min-width:0;}
+  .hbar-row .hbar-label{display:flex;justify-content:space-between;gap:8px;margin-bottom:4px;color:var(--ink);}
+  .hbar-row .hbar-label span{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .hbar-row .hbar-label strong{flex:0 0 auto;white-space:nowrap;}
   .hbar-track{background:var(--border-soft);border-radius:999px;height:8px;overflow:hidden;}
   .hbar-fill{height:100%;border-radius:999px;}
 

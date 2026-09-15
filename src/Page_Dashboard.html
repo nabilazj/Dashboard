@@ -132,7 +132,7 @@
       }).join('');
 
       var picBars = d.picBar.map(function (p) {
-        return '<div class="hbar-row"><div class="hbar-label"><span>' + App.esc(p.label) + '</span><strong>' + App.fmtRupiah(p.value) + '</strong></div>' +
+        return '<div class="hbar-row"><div class="hbar-label"><span>' + App.esc(p.label) + '</span><strong>' + App.fmtRupiahSingkat(p.value) + '</strong></div>' +
           '<div class="hbar-track"><div class="hbar-fill" style="width:' + p.pct + '%;background:' + p.color + '"></div></div></div>';
       }).join('');
 
