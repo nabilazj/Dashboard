@@ -69,6 +69,19 @@
       return '<option>' + m + '</option>';
     }).join('');
 
+    // Dukung tombol interaktif dari halaman lain (mis. kartu KPI di Dashboard
+    // yang klik-nya menuju ?page=tagihan&status=BELUM%20BAYAR) — kalau ada
+    // parameter status di URL saat halaman dibuka, langsung terapkan sebagai
+    // filter awal, sebelum data pertama dimuat.
+    (function () {
+      var qp = new URLSearchParams(window.location.search);
+      var qStatus = qp.get('status');
+      if (qStatus === 'LUNAS' || qStatus === 'BELUM BAYAR') {
+        state.status = qStatus;
+        document.getElementById('fStatus').value = qStatus;
+      }
+    })();
+
     function currentFilters() {
       return { periodMode: state.periodMode, bulan: state.bulan, bulanAwal: state.bulanAwal, bulanAkhir: state.bulanAkhir,
         tahun: state.tahun, bank: state.bank, bulanFilter: state.bulanFilter, status: state.status, picAdmin: state.picAdmin, search: state.search, page: state.page };

@@ -78,7 +78,8 @@
   .stats-grid.four{grid-template-columns:repeat(4,minmax(0,1fr));}
   .stats-grid.two{grid-template-columns:repeat(2,minmax(0,1fr));}
   .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;
-    display:flex;align-items:flex-start;gap:12px;box-shadow:0 8px 22px rgba(24,42,91,.05);}
+    display:flex;align-items:flex-start;gap:12px;box-shadow:0 8px 22px rgba(24,42,91,.05);transition:border-color .15s ease,transform .15s ease;}
+  a.stat-card:hover{border-color:var(--violet);transform:translateY(-1px);}
   .stat-icon{width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;
     font-weight:700;font-size:15px;flex-shrink:0;color:#4b22ff;background:#e7e3ff;}
   .stat-icon.green{color:#08a878;background:#d9f9ec;}
@@ -155,13 +156,21 @@
   .live-source i{width:7px;height:7px;border-radius:50%;background:#08a878;display:inline-block;}
   .balance-scroll{max-height:280px;overflow-y:auto;}
 
-  .dashboard-grid{display:grid;grid-template-columns:1.55fr 1fr 1.12fr 1fr;gap:16px;align-items:stretch;}
+  /* Dashboard: 2 baris 2-kolom (bukan 1 baris 4-kolom lagi) — baris atas
+     Trend + PIC Admin (Trend lebih lebar), baris bawah donut Bank + donut
+     Status Tagihan (sama lebar, lebih sempit). */
+  .dashboard-grid-top{display:grid;grid-template-columns:1.6fr 1fr;gap:16px;align-items:stretch;}
+  .dashboard-grid-bottom{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:stretch;margin-top:16px;}
   .legend{display:flex;gap:14px;font-size:11.5px;color:var(--muted);margin-bottom:8px;}
   .legend i.lg{width:10px;height:10px;border-radius:3px;display:inline-block;margin-right:5px;}
   .legend i.lg.invoice{background:var(--violet);} .legend i.lg.paid{background:var(--cyan);}
-  .bar-chart{display:flex;gap:8px;align-items:end;height:150px;overflow-x:auto;padding-top:6px;}
-  .bar-group{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:26px;flex:1;}
-  .bars{display:flex;gap:3px;align-items:end;height:120px;}
+  .bar-chart{display:flex;gap:8px;align-items:end;height:118px;overflow-x:auto;padding-top:6px;}
+  .bar-group{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:34px;flex:1;}
+  .bar-value{font-size:9px;line-height:1.35;text-align:center;white-space:nowrap;}
+  .bar-value b{display:block;font-weight:700;}
+  .bar-value .inv{color:var(--violet);}
+  .bar-value .pay{color:var(--cyan);}
+  .bars{display:flex;gap:3px;align-items:end;height:64px;}
   .bars i{display:block;width:9px;border-radius:3px 3px 0 0;}
   .bars i.invoice{background:var(--violet);} .bars i.paid{background:var(--cyan);}
   .bar-group span{font-size:10.5px;color:var(--muted);}
@@ -172,8 +181,14 @@
   .donut span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:var(--navy);}
   .donut-legend{display:flex;flex-direction:column;gap:6px;font-size:11.5px;}
   .donut-legend .sw{width:9px;height:9px;border-radius:3px;display:inline-block;margin-right:6px;}
+  /* Donut Sisa Piutang per Bank — dipersempit lagi supaya pas berdampingan dengan Status Tagihan. */
+  .bank-donut-panel .donut{width:92px;height:92px;}
+  .bank-donut-panel .donut::before{inset:13px;}
+  .bank-donut-panel .donut span{font-size:11px;}
+  .bank-donut-panel .donut-wrap{gap:12px;}
 
   .horizontal-bars{display:flex;flex-direction:column;gap:10px;}
+  .hbar-scroll{max-height:280px;overflow-y:auto;padding-right:2px;}
   .hbar-row{font-size:12px;}
   .hbar-row .hbar-label{display:flex;justify-content:space-between;margin-bottom:4px;color:var(--ink);}
   .hbar-track{background:var(--border-soft);border-radius:999px;height:8px;overflow:hidden;}
@@ -239,17 +254,6 @@
   @media (max-width:1100px){
     .matrix-scroll{max-height:70vh;}
   }
-
-  .bottom-summary{display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:16px;}
-  .bottom-summary.two-col{grid-template-columns:1fr 1fr;margin-bottom:18px;}
-  .bottom-summary.one-col{grid-template-columns:1fr;}
-  .bottom-summary>div{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;box-shadow:0 8px 22px rgba(24,42,91,.05);}
-  .bottom-summary span{font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;}
-  .bottom-summary strong{display:block;font-size:19px;color:var(--navy);margin-top:4px;}
-  .reminder-card{background:#fffaf0 !important;border-color:#ffe6b3 !important;}
-  [data-theme="dark"] .reminder-card{background:#241f0c !important;border-color:#453a12 !important;}
-  .reminder-card ul{margin:8px 0 0;padding-left:18px;font-size:12.5px;color:var(--ink);}
-  .reminder-card li{margin-bottom:4px;}
 
   /* ---------- Penggajian-specific ---------- */
   .payroll-control-grid{display:grid;grid-template-columns:1.65fr 1fr;gap:16px;}
@@ -328,7 +332,6 @@
   @media (max-width:1450px){
     .stats-grid.six{grid-template-columns:repeat(3,1fr);}
     .stats-grid.four{grid-template-columns:repeat(2,1fr);}
-    .dashboard-grid{grid-template-columns:1.4fr 1fr;}
   }
   @media (max-width:1200px){
     .payroll-control-grid,.payroll-history-grid{grid-template-columns:1fr;}
@@ -341,7 +344,7 @@
     .sidebar{transform:translateX(-102%);}
     .sidebar.open{transform:translateX(0);}
     .main-area{margin-left:0;padding:0 16px 40px;}
-    .dashboard-grid,.bottom-summary,.bottom-summary.two-col,.bottom-summary.one-col{grid-template-columns:1fr;}
+    .dashboard-grid-top,.dashboard-grid-bottom{grid-template-columns:1fr;}
     .filters{grid-template-columns:1fr 1fr;display:grid;}
   }
   @media (max-width:560px){

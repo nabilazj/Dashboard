@@ -134,13 +134,13 @@ function getDashboardData_(all) {
   var donutColors = ['#4b22ff', '#10b5d5', '#ffc72c', '#f15b50', '#10c79a'];
   top5Bank.forEach(function (b, i) { b.color = donutColors[i]; });
 
-  // Horizontal bar Sisa Piutang per PIC Admin (top-5)
+  // Horizontal bar Sisa Piutang per PIC Admin — SEMUA PIC (tidak dibatasi
+  // top-5 lagi), warna diulang (modulo) kalau PIC-nya lebih dari 5.
   var byPic = groupBy_(tahunIni, function (t) { return t.PIC_ADMIN || 'BELUM DIISI'; });
   var picList = Object.keys(byPic).map(function (p) { return { label: p, value: sum_(byPic[p], function (t) { return t.SISA_PIUTANG; }) }; });
   picList.sort(function (a, b) { return b.value - a.value; });
-  var top5Pic = picList.slice(0, 5);
-  var maxPic = Math.max(1, top5Pic.length ? top5Pic[0].value : 0);
-  top5Pic.forEach(function (p, i) { p.color = donutColors[i]; p.pct = p.value / maxPic * 100; });
+  var maxPic = Math.max(1, picList.length ? picList[0].value : 0);
+  picList.forEach(function (p, i) { p.color = donutColors[i % donutColors.length]; p.pct = p.value / maxPic * 100; });
 
   var statusPct = (countLunas + countBelumBayar) > 0 ? Math.round(countLunas / (countLunas + countBelumBayar) * 100) : null;
 
@@ -163,7 +163,7 @@ function getDashboardData_(all) {
     },
     trend: trend,
     donutBank: top5Bank,
-    picBar: top5Pic,
+    picBar: picList,
     statusDonut: { pctLunas: statusPct, lunas: countLunas, belumBayar: countBelumBayar },
     top10: OU.slice(0, 10).map(formatOldUnpaidClientRow_),
     reminder: {

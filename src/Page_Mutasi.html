@@ -66,6 +66,24 @@
     document.getElementById('fStart').value = state.startDate;
     document.getElementById('fEnd').value = state.endDate;
 
+    // Dukung tombol interaktif dari halaman lain (mis. kartu KPI di Dashboard):
+    // ?status=WAITING (Belum Teralokasi) atau ?today=1 (Mutasi Hari Ini, samakan
+    // Dari/Sampai tanggal jadi hari ini saja) — diterapkan sebelum data pertama dimuat.
+    (function () {
+      var qp = new URLSearchParams(window.location.search);
+      var qStatus = qp.get('status');
+      if (qStatus === 'ALLOCATED' || qStatus === 'WAITING') {
+        state.status = qStatus;
+        document.getElementById('fStatus').value = qStatus;
+      }
+      if (qp.get('today') === '1') {
+        var todayStr = today.toISOString().slice(0, 10);
+        state.startDate = todayStr; state.endDate = todayStr;
+        document.getElementById('fStart').value = todayStr;
+        document.getElementById('fEnd').value = todayStr;
+      }
+    })();
+
     function currentFilters() {
       return { startDate: state.startDate, endDate: state.endDate, bank: state.bank, company: state.company, status: state.status, search: state.search, page: state.page };
     }

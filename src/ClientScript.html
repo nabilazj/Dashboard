@@ -15,6 +15,17 @@
       n = Math.round(Number(n) || 0);
       return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
     }
+    /** Rupiah versi singkat (Rp1,2 M / Rp850 Jt / Rp12 Rb) — dipakai di tempat sempit spt label per-bar chart. */
+    function fmtRupiahSingkat(n) {
+      n = Math.round(Number(n) || 0);
+      var neg = n < 0; n = Math.abs(n);
+      var out;
+      if (n >= 1e9) out = (Math.round(n / 1e8) / 10).toString().replace('.', ',') + ' M';
+      else if (n >= 1e6) out = (Math.round(n / 1e5) / 10).toString().replace('.', ',') + ' Jt';
+      else if (n >= 1e3) out = Math.round(n / 1e3) + ' Rb';
+      else out = String(n);
+      return (neg ? '-Rp' : 'Rp') + out;
+    }
     function esc(s) {
       return String(s === null || s === undefined ? '' : s)
         .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -184,7 +195,7 @@
     syncThemeToggleUI_();
 
     return {
-      fmtRupiah: fmtRupiah, fmtAngka: fmtAngka, esc: esc, debounce: debounce,
+      fmtRupiah: fmtRupiah, fmtAngka: fmtAngka, fmtRupiahSingkat: fmtRupiahSingkat, esc: esc, debounce: debounce,
       call: call, downloadText: downloadText, downloadBase64: downloadBase64,
       setupExport: setupExport, setupPolling: setupPolling, toggleTheme: toggleTheme,
     };
